@@ -8,9 +8,6 @@
   },
   "repository": "https://github.com/nearbuilders/everything-dev",
   "app": {
-    "host": {
-      "development": "local:host"
-    },
     "ui": {
       "name": "ui",
       "development": "local:ui",
@@ -29,15 +26,6 @@
       ],
       "production": "https://elliot-braem-3400-api-monorepo-elliot-braem-ad0cd00b5-ze.zephyrcloud.app",
       "integrity": "sha384-aDDXp++RUTuEh37eCigMug7zlqwWcV8G9a/xNrr2HziTIoDunhquf1x3gtbBiPIV"
-    },
-    "auth": {
-      "name": "everything-dev_auth-plugin",
-      "development": "local:plugins/auth",
-      "secrets": [
-        "AUTH_DATABASE_URL",
-        "BETTER_AUTH_SECRET",
-        "CORS_ORIGIN"
-      ]
     }
   },
   "plugins": {},
