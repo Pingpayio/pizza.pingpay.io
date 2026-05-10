@@ -49,7 +49,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       : "";
     const title = getAppName(runtimeConfig);
     const description =
-      "Open runtime for apps on NEAR, composed from published config and loaded through a shared host, UI, and API runtime.";
+      "Pay for your pizza with crypto — Pizza Boy Billy at Tortorices on Grand Ave.";
     const siteName = title;
     const ogImage = `${assetsUrl}/metadata.png`;
 

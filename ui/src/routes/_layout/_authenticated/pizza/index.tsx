@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
 import { BillyBadge, PizzaBackground, PizzaPoweredBy } from "@/components";
-import { useApiClient } from "@/lib/use-api-client";
+import { useApiClient } from "@/lib/api";
 
 const SPECIALS = [
   "Deep Dish with the Caramelized Crust",

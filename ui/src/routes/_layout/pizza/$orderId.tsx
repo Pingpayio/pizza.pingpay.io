@@ -1,9 +1,10 @@
 import { consumeEventIterator } from "@orpc/client";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { getSocialImageMeta } from "everything-dev/ui/metadata";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BillyBadge, PizzaBackground, PizzaPoweredBy } from "@/components";
-import { useApiClient } from "@/lib/use-api-client";
+import { useApiClient } from "@/lib/api";
 
 export const Route = createFileRoute("/_layout/pizza/$orderId")({
   loader: async ({ context, params }) => {
@@ -13,7 +14,7 @@ export const Route = createFileRoute("/_layout/pizza/$orderId")({
       return null;
     }
   },
-  head: ({ loaderData }) => {
+  head: ({ loaderData, matches, params }) => {
     const name = loaderData?.order?.name;
     const amount = loaderData?.order?.amount
       ? (Number(loaderData.order.amount) / 1_000_000).toLocaleString(undefined, {
@@ -21,15 +22,28 @@ export const Route = createFileRoute("/_layout/pizza/$orderId")({
           maximumFractionDigits: 2,
         })
       : null;
-    const title = name ? `${name} | Pizza Boy Billy | Tortorices` : "Pizza Boy Billy | Tortorices";
+    const title = name ? `${name} | Pizza Pay` : "Pizza Pay";
     const description =
       name && amount
-        ? `Pay ${amount} USDC for ${name}`
-        : "Pay for your pizza order";
+        ? `Pay ${amount} USDC for ${name} — Pizza Boy Billy at Tortorices on Grand Ave`
+        : "Pay for your pizza order — Pizza Boy Billy at Tortorices on Grand Ave";
+    const rootMatch = matches[0] as { loaderData?: { assetsUrl?: string; runtimeConfig?: { hostUrl?: string } } } | undefined;
+    const assetsUrl = rootMatch?.loaderData?.assetsUrl ?? "";
+    const hostUrl = rootMatch?.loaderData?.runtimeConfig?.hostUrl ?? "";
+    const siteUrl = hostUrl ? `${hostUrl}/pizza/${params.orderId}` : "";
+    const ogImage = `${assetsUrl}/metadata.png`;
     return {
       meta: [
         { title },
         { name: "description", content: description },
+        ...getSocialImageMeta({
+          imageUrl: ogImage,
+          title,
+          description,
+          siteName: "Pizza Pay",
+          siteUrl,
+          alt: name ? `Pay for ${name} at Tortorices` : "Pizza Pay at Tortorices",
+        }),
       ],
     };
   },

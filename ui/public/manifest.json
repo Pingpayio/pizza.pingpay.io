@@ -1,7 +1,7 @@
 {
-  "short_name": "everything.dev",
-  "name": "everything.dev",
-  "description": "Open runtime for apps on NEAR, composed from published config and loaded at runtime.",
+  "short_name": "Pizza Pay",
+  "name": "Pizza Pay",
+  "description": "Pay for your pizza with crypto — Pizza Boy Billy at Tortorices on Grand Ave.",
   "icons": [
     {
       "src": "favicon-16x16.png",
@@ -52,8 +52,8 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#ffffff",
-  "background_color": "#fafafa",
-  "categories": ["developer tools", "productivity", "web development"],
+  "theme_color": "#c0392b",
+  "background_color": "#c0392b",
+  "categories": ["food", "payments"],
   "orientation": "portrait-primary"
 }
