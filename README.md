@@ -5,15 +5,13 @@
 
 <div align="center">
 
-<h1 style="font-size: 4.25rem; font-weight: 800; line-height: 1; margin: 0;">pizza.pingpay.io</h1>
+<img src="ui/public/metadata.png" alt="Pizza Pay" width="600" />
 
-<img src="ui/src/assets/under-construction.gif" alt="Under construction" width="380" />
+<h1>Pizza Pay</h1>
+
+A white label implementation of PingPay for P2P point-of-sale pizza purchases.
 
 </div>
-
-A crypto-native point-of-sale app for **Tortorices on Grand Ave**. The cashier rings up an order and generates a QR code. The customer scans it, picks a token and chain, and pays in USDC via [PingPay](https://pingpay.io/).
-
-Built on [everything.dev](https://everything.dev) — Module Federation + [every-plugin](https://plugin.everything.dev/) + [NEAR Protocol](https://near.dev/).
 
 ## Quick Start
 
