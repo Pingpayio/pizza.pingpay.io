@@ -2,9 +2,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Navigate, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { type ClientRuntimeConfig, getAuthClient } from "@/app";
 import { BillyBadge, PizzaBackground, isBillysBirthday } from "@/components";
-import { sessionQueryOptions } from "@/lib/session";
+import { sessionQueryKey, sessionQueryOptions, useAuthClient } from "@/lib/auth";
 
 function safeRedirectTo(path?: string) {
   return path?.startsWith("/") ? path : "/pizza";
@@ -24,7 +23,7 @@ export const Route = createFileRoute("/_layout/login")({
     const initialSession = context.session;
     const session =
       initialSession ??
-      queryClient.getQueryData(sessionQueryOptions(initialSession, context.runtimeConfig).queryKey);
+      queryClient.getQueryData(sessionQueryOptions(context.authClient, initialSession).queryKey);
 
     if (session?.user) {
       throw redirect({ to: safeRedirectTo(search.redirect), search: {} });
@@ -35,11 +34,8 @@ export const Route = createFileRoute("/_layout/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { runtimeConfig } = Route.useRouteContext() as {
-    runtimeConfig?: Partial<ClientRuntimeConfig>;
-  };
-  const auth = getAuthClient(runtimeConfig);
-  const { data: session } = useQuery(sessionQueryOptions(undefined, runtimeConfig));
+  const auth = useAuthClient();
+  const { data: session } = useQuery(sessionQueryOptions(auth));
   const { redirect } = Route.useSearch();
   const [isPending, setIsPending] = useState(false);
   const [email, setEmail] = useState("");
@@ -52,9 +48,9 @@ function LoginPage() {
     toast.success(message);
     const { data: freshSession } = await auth.getSession();
     if (freshSession) {
-      queryClient.setQueryData(["session"], freshSession);
+      queryClient.setQueryData(sessionQueryKey, freshSession);
     }
-    await queryClient.invalidateQueries({ queryKey: ["session"] });
+    await queryClient.invalidateQueries({ queryKey: sessionQueryKey });
     navigate({ to: redirectTo, replace: true, search: {} });
   };
 

@@ -85,7 +85,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "every-plugin": "^2.5.8",
-    "everything-dev": "^1.12.0",
+    "everything-dev": "^1.12.2",
     "sharp": "^0.34.5",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3",

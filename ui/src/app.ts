@@ -30,11 +30,11 @@ export {
   getRuntimeConfig,
 };
 
-import type { ApiClient } from "./lib/api-client";
-import type { AuthClient as AuthClientType } from "./auth";
+import type { ApiClient } from "./lib/api";
+import type { AuthClient as AuthClientType } from "./lib/auth";
 
-export type { ApiClient } from "./lib/api-client";
-export { createApiClient } from "./lib/api-client";
+export type { ApiClient } from "./lib/api";
+export { createApiClient } from "./lib/api";
 export type { AuthClient, Organization, Passkey, SessionData } from "./lib/auth";
 export { createAuthClient, sessionQueryOptions, useAuthClient } from "./lib/auth";
 

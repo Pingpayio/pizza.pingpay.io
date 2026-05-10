@@ -1,34 +1,12 @@
 {
-  "extends": "bos://auth.everything.near/everything.dev",
   "account": "work.efiz.near",
+  "extends": "bos://auth.everything.near/everything.dev",
   "domain": "pizza.pingpay.io",
   "testnet": "dev.allthethings.testnet",
   "staging": {
     "domain": "staging.dev.everything.dev"
   },
   "repository": "https://github.com/nearbuilders/everything-dev",
-  "app": {
-    "ui": {
-      "name": "ui",
-      "development": "local:ui",
-      "production": "https://elliot-braem-3443-ui-monorepo-elliot-braem-b385841bd-ze.zephyrcloud.app",
-      "integrity": "sha384-lP/5PxclW8NhqdgjOfaqj0ZD0kYlPWwOO4bkg8eE3yfoKuf6rghNpXSsC92ncL3S",
-      "ssr": "https://elliot-braem-3399-ui-monorepo-elliot-braem-e7aecd76c-ze.zephyrcloud.app"
-    },
-    "api": {
-      "name": "api",
-      "development": "local:api",
-      "secrets": [
-        "API_DATABASE_URL",
-        "PINGPAY_API_URL",
-        "PINGPAY_API_KEY",
-        "PINGPAY_WEBHOOK_SECRET"
-      ],
-      "production": "https://elliot-braem-3400-api-monorepo-elliot-braem-ad0cd00b5-ze.zephyrcloud.app",
-      "integrity": "sha384-aDDXp++RUTuEh37eCigMug7zlqwWcV8G9a/xNrr2HziTIoDunhquf1x3gtbBiPIV"
-    }
-  },
-  "plugins": {},
   "shared": {
     "ui": {
       "effect": {
@@ -58,8 +36,67 @@
         "singleton": true,
         "strictVersion": false,
         "shareScope": "default"
+      },
+      "better-near-auth": {
+        "version": "1.4.2",
+        "requiredVersion": "^1.4.2",
+        "singleton": true,
+        "strictVersion": false,
+        "shareScope": "default"
+      },
+      "@better-auth/api-key": {
+        "version": "1.6.9",
+        "requiredVersion": "^1.6.9",
+        "singleton": true,
+        "strictVersion": false,
+        "shareScope": "default"
+      },
+      "@better-auth/passkey": {
+        "version": "1.6.9",
+        "requiredVersion": "^1.6.9",
+        "singleton": true,
+        "strictVersion": false,
+        "shareScope": "default"
       }
     },
     "plugins": {}
+  },
+  "plugins": {},
+  "app": {
+    "host": {
+      "development": "local:host",
+      "production": "https://elliot-braem-3498-host-everything-dev-nearbuilder-71d5f7f4d-ze.zephyrcloud.app",
+      "integrity": "sha384-Tsu6qanLw+Pn81PyT0VmuOM6bcae5ki20tZ09x1AUPMygsYj7QwoV2eGG299Zj+T"
+    },
+    "ui": {
+      "name": "ui",
+      "development": "local:ui",
+      "production": "https://elliot-braem-3499-ui-monorepo-elliot-braem-e6bfa49af-ze.zephyrcloud.app",
+      "integrity": "sha384-Z9aSvwLKodKzTmzuPI4W4UiYOEMJ9oC3klmc2Xj+3nVjPw7s5RSHx0r4aUN1MTgU",
+      "ssr": "https://elliot-braem-3399-ui-monorepo-elliot-braem-e7aecd76c-ze.zephyrcloud.app"
+    },
+    "api": {
+      "name": "api",
+      "development": "local:api",
+      "production": "https://elliot-braem-3400-api-monorepo-elliot-braem-ad0cd00b5-ze.zephyrcloud.app",
+      "integrity": "sha384-aDDXp++RUTuEh37eCigMug7zlqwWcV8G9a/xNrr2HziTIoDunhquf1x3gtbBiPIV",
+      "secrets": [
+        "API_DATABASE_URL",
+        "PINGPAY_API_URL",
+        "PINGPAY_API_KEY",
+        "PINGPAY_WEBHOOK_SECRET"
+      ]
+    },
+    "auth": {
+      "name": "everything-dev_auth-plugin",
+      "development": "local:plugins/auth",
+      "production": "https://elliot-braem-3503-everything-dev-auth-plugin-bett-7fee0d475-ze.zephyrcloud.app",
+      "integrity": "sha384-2/XoU0888rz8jb9s20IgzCP8buf3buTECG1fSAyzTLDwFMLNNKeAQ3KGEKbRlwh2",
+      "secrets": [
+        "AUTH_DATABASE_URL",
+        "BETTER_AUTH_SECRET",
+        "CORS_ORIGIN"
+      ]
+    }
   }
 }
