@@ -25,3 +25,4 @@ export { Label } from "./ui/label";
 export { ScrollArea, ScrollBar } from "./ui/scroll-area";
 export { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 export { UnderConstruction } from "./under-construction";
+export { PizzaBackground, PizzaPoweredBy } from "./pizza";

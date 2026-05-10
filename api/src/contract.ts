@@ -2,6 +2,42 @@ import { BAD_REQUEST, CONNECTION_ERROR, NOT_FOUND, UNAUTHORIZED } from "every-pl
 import { eventIterator, oc } from "every-plugin/orpc";
 import { z } from "every-plugin/zod";
 
+const quoteSchema = z.object({
+  amountIn: z.string(),
+  amountInFormatted: z.string(),
+  amountInUsd: z.string().optional(),
+  amountOut: z.string(),
+  amountOutFormatted: z.string(),
+  amountOutUsd: z.string().optional(),
+  pricingRateDisplay: z.string().optional(),
+  feeDisplay: z.string().optional(),
+  deadline: z.string().optional(),
+  warning: z
+    .object({ code: z.string(), message: z.string(), minAmount: z.string().optional() })
+    .optional(),
+});
+
+const feeBreakdownSchema = z.object({
+  lines: z.array(
+    z.object({
+      type: z.string(),
+      label: z.string(),
+      recipient: z.string(),
+      bps: z.number(),
+      amount: z.string(),
+      amountFormatted: z.string(),
+      amountUsd: z.string().optional(),
+    }),
+  ),
+  total: z.object({
+    assetId: z.string(),
+    decimals: z.number(),
+    amount: z.string(),
+    amountFormatted: z.string(),
+    amountUsd: z.string().optional(),
+  }),
+});
+
 export const contract = oc.router({
   ping: oc.route({ method: "GET", path: "/ping" }).output(
     z.object({
@@ -57,6 +93,25 @@ export const contract = oc.router({
     )
     .errors({ NOT_FOUND, CONNECTION_ERROR }),
 
+  quotePizzaPayment: oc
+    .route({ method: "POST", path: "/pizza/orders/{orderId}/quote" })
+    .input(
+      z.object({
+        orderId: z.string(),
+        payerAsset: z.object({
+          chain: z.string(),
+          symbol: z.string(),
+        }),
+      }),
+    )
+    .output(
+      z.object({
+        quote: quoteSchema,
+        feeBreakdown: feeBreakdownSchema.optional(),
+      }),
+    )
+    .errors({ BAD_REQUEST, NOT_FOUND, CONNECTION_ERROR }),
+
   preparePizzaPayment: oc
     .route({ method: "POST", path: "/pizza/orders/{orderId}/prepare" })
     .input(
@@ -65,7 +120,6 @@ export const contract = oc.router({
         payerAsset: z.object({
           chain: z.string(),
           symbol: z.string(),
-          amount: z.string(),
         }),
       }),
     )
@@ -73,11 +127,24 @@ export const contract = oc.router({
       z.object({
         depositAddress: z.string(),
         amountToDeposit: z.string(),
-        quote: z.unknown().optional(),
-        feeBreakdown: z.unknown().optional(),
+        amountToDepositFormatted: z.string(),
+        quote: quoteSchema.optional(),
+        feeBreakdown: feeBreakdownSchema.optional(),
+        transfer: z.unknown().optional(),
       }),
     )
     .errors({ BAD_REQUEST, NOT_FOUND, CONNECTION_ERROR }),
+
+  notifyPizzaDeposit: oc
+    .route({ method: "POST", path: "/pizza/orders/{orderId}/notify" })
+    .input(z.object({ orderId: z.string() }))
+    .output(
+      z.object({
+        status: z.string(),
+        updatedAt: z.string().optional(),
+      }),
+    )
+    .errors({ NOT_FOUND, BAD_REQUEST, CONNECTION_ERROR }),
 
   subscribePizzaOrder: oc
     .route({ method: "GET", path: "/pizza/orders/{orderId}/stream" })

@@ -6,12 +6,20 @@ interface PingPayConfig {
 }
 
 interface CheckoutSessionResponse {
-  session: { sessionId: string; [key: string]: unknown };
+  session: {
+    sessionId: string;
+    status: string;
+    amount: { assetId: string; amount: string; decimals?: number };
+    recipient: { address: string };
+    createdAt: string;
+    expiresAt?: string;
+    [key: string]: unknown;
+  };
   sessionUrl: string;
 }
 
 interface GetSessionResponse {
-  session: { [key: string]: unknown };
+  session: CheckoutSessionResponse["session"];
   config: {
     availableMethods: string[];
     suggestedAsset: unknown;
@@ -20,11 +28,59 @@ interface GetSessionResponse {
   };
 }
 
+interface QuoteResponse {
+  quote: {
+    depositAddress?: string;
+    amountIn: string;
+    amountInFormatted: string;
+    amountInUsd?: string;
+    amountOut: string;
+    amountOutFormatted: string;
+    amountOutUsd?: string;
+    pricingRateDisplay?: string;
+    feeDisplay?: string;
+    deadline?: string;
+    warning?: { code: string; message: string; minAmount?: string };
+    quoteRequest?: { originAsset: string; destinationAsset: string };
+  };
+  feeBreakdown?: {
+    lines: Array<{
+      type: string;
+      label: string;
+      recipient: string;
+      bps: number;
+      amount: string;
+      amountFormatted: string;
+      amountUsd?: string;
+    }>;
+    total: {
+      assetId: string;
+      decimals: number;
+      amount: string;
+      amountFormatted: string;
+      amountUsd?: string;
+    };
+  };
+}
+
 interface PreparePaymentResponse {
   depositAddress?: string;
-  payment?: { paymentId?: string; depositAddress?: string; [key: string]: unknown };
-  quote?: { amountIn?: string; [key: string]: unknown };
-  feeBreakdown?: { [key: string]: unknown };
+  payment?: {
+    paymentId?: string;
+    status?: string;
+    depositAddress?: string;
+    [key: string]: unknown;
+  };
+  quote?: QuoteResponse["quote"];
+  feeBreakdown?: QuoteResponse["feeBreakdown"];
+  transfer?: {
+    kind: string;
+    to: string;
+    amount?: string;
+    amountYocto?: string;
+    contractId?: string;
+    attachStorageDeposit?: boolean;
+  };
 }
 
 interface PaymentStatusResponse {
@@ -83,9 +139,20 @@ function createPingPayService(config: PingPayConfig) {
     return response.json() as Promise<GetSessionResponse>;
   }
 
+  async function getQuote(input: {
+    sessionId: string;
+    payerAsset: { amount: string; asset: { chain: string; symbol: string } };
+  }): Promise<QuoteResponse> {
+    const response = await pingpayFetch("/payments/quote", {
+      method: "POST",
+      body: JSON.stringify({ input }),
+    });
+    return response.json() as Promise<QuoteResponse>;
+  }
+
   async function preparePayment(input: {
     sessionId: string;
-    payerAsset: { chain: string; symbol: string; amount: string };
+    payerAsset: { amount: string; asset: { chain: string; symbol: string } };
     payer: { address: string };
     idempotencyKey: string;
     paymentMethod: string;
@@ -125,6 +192,7 @@ function createPingPayService(config: PingPayConfig) {
   return {
     createCheckoutSession,
     getSession,
+    getQuote,
     preparePayment,
     getPaymentStatus,
     streamPaymentStatus,

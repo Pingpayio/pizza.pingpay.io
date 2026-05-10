@@ -1,6 +1,6 @@
 {
   "extends": "bos://auth.everything.near/everything.dev",
-  "account": "pay.everything.near",
+  "account": "work.efiz.near",
   "domain": "pay.everything.dev",
   "testnet": "dev.allthethings.testnet",
   "staging": {
@@ -13,7 +13,10 @@
     },
     "ui": {
       "name": "ui",
-      "development": "local:ui"
+      "development": "local:ui",
+      "production": "https://elliot-braem-3357-ui-monorepo-elliot-braem-5482099cb-ze.zephyrcloud.app",
+      "integrity": "sha384-JWGvxK9QoLMcSdbs2ms2F7T3HYFPuQnSi/U2GQsJf5FefZwRgHCUmMvRBjiZ5W29",
+      "ssr": "https://elliot-braem-3358-ui-monorepo-elliot-braem-cb28b21e2-ze.zephyrcloud.app"
     },
     "api": {
       "name": "api",
@@ -23,7 +26,9 @@
         "PINGPAY_API_URL",
         "PINGPAY_API_KEY",
         "PINGPAY_WEBHOOK_SECRET"
-      ]
+      ],
+      "production": "https://elliot-braem-3359-api-monorepo-elliot-braem-db711540c-ze.zephyrcloud.app",
+      "integrity": "sha384-aDDXp++RUTuEh37eCigMug7zlqwWcV8G9a/xNrr2HziTIoDunhquf1x3gtbBiPIV"
     },
     "auth": {
       "name": "everything-dev_auth-plugin",

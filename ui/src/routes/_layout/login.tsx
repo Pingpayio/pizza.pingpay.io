@@ -3,9 +3,12 @@ import { createFileRoute, Navigate, redirect, useNavigate } from "@tanstack/reac
 import { useState } from "react";
 import { toast } from "sonner";
 import { type ClientRuntimeConfig, getAuthClient } from "@/app";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PizzaBackground } from "@/components";
 import { sessionQueryOptions } from "@/lib/session";
+
+function safeRedirectTo(path?: string) {
+  return path?.startsWith("/") ? path : "/pizza";
+}
 
 type SearchParams = {
   redirect?: string;
@@ -24,8 +27,7 @@ export const Route = createFileRoute("/_layout/login")({
       queryClient.getQueryData(sessionQueryOptions(initialSession, context.runtimeConfig).queryKey);
 
     if (session?.user) {
-      const redirectTo = search.redirect?.startsWith("/") ? search.redirect : "/pizza";
-      throw redirect({ to: redirectTo, search: {} });
+      throw redirect({ to: safeRedirectTo(search.redirect), search: {} });
     }
   },
   component: LoginPage,
@@ -46,7 +48,7 @@ function LoginPage() {
   const queryClient = useQueryClient();
 
   const handleSuccess = async (message: string) => {
-    const redirectTo = redirect?.startsWith("/") ? redirect : "/pizza";
+    const redirectTo = safeRedirectTo(redirect);
     toast.success(message);
     const { data: freshSession } = await auth.getSession();
     if (freshSession) {
@@ -138,70 +140,119 @@ function LoginPage() {
     }
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSignUp) {
+      void handleEmailSignUp();
+    } else {
+      void handleEmailSignIn();
+    }
+  };
+
   if (session?.user) {
-    const redirectTo = redirect?.startsWith("/") ? redirect : "/pizza";
-    return <Navigate to={redirectTo} replace search={{}} />;
+    return <Navigate to={safeRedirectTo(redirect)} replace search={{}} />;
   }
 
   return (
-    <div className="min-h-[70vh] w-full flex items-start justify-center px-6 pt-[15vh] animate-fade-in">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center space-y-2">
-          <span className="text-4xl">🍕</span>
-          <h1 className="text-2xl font-bold tracking-tight">Pizza POS Login</h1>
-          <p className="text-sm text-muted-foreground">Sign in to start taking orders</p>
-        </div>
+    <div
+      className="fixed inset-0 flex flex-col animate-fade-in"
+      style={{ background: "linear-gradient(160deg, #c0392b 0%, #922b21 60%, #7b241c 100%)" }}
+    >
+      <PizzaBackground />
 
-        <div className="space-y-4">
-          <Button onClick={handleAnonymous} disabled={isPending} className="w-full">
-            {isPending ? "starting..." : "continue anonymously"}
-          </Button>
+      <div
+        className="relative z-10 flex flex-col items-center h-full overflow-y-auto overscroll-contain pt-safe pb-safe px-5"
+        style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+      >
+        <div className="flex flex-col items-center w-full max-w-sm min-h-full justify-center gap-8 py-6">
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">or</span>
+          <div className="flex flex-col items-center gap-3 text-center">
+            <span
+              className="text-7xl"
+              style={{ filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.4))" }}
+            >
+              🍕
+            </span>
+            <div>
+              <p className="pizza-label text-white/55 mb-1">merchant portal</p>
+              <h1
+                className="text-5xl font-semibold text-white pizza-display"
+                style={{ textShadow: "rgba(0,0,0,0.25) 2px 2px 0, rgba(0,0,0,0.12) 4px 4px 10px" }}
+              >
+                Pizza POS
+              </h1>
             </div>
           </div>
 
-          <div className="space-y-3">
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@example.com"
-            />
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="password"
-            />
-            <Button
-              onClick={isSignUp ? handleEmailSignUp : handleEmailSignIn}
+          <div className="pizza-card w-full p-6 flex flex-col gap-4" style={{ background: "#fffde7" }}>
+            <button
+              type="button"
+              onClick={handleAnonymous}
               disabled={isPending}
-              className="w-full"
-              variant="outline"
+              className="pizza-btn pizza-btn-primary w-full py-4 text-white"
+              style={{ background: "#c0392b" }}
             >
-              {isPending
-                ? isSignUp
-                  ? "creating..."
-                  : "signing in..."
-                : isSignUp
-                  ? "create account"
-                  : "sign in"}
-            </Button>
-            <Button
-              variant="ghost"
+              {isPending ? "opening register..." : "start taking orders"}
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-black/12" />
+              <span className="pizza-label text-black/35">or sign in</span>
+              <div className="flex-1 h-px bg-black/12" />
+            </div>
+
+            <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@example.com"
+                autoComplete="email"
+                inputMode="email"
+                enterKeyHint="next"
+                className="pizza-input w-full px-4 py-3 bg-white text-black placeholder-black/30"
+              />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="password"
+                autoComplete={isSignUp ? "new-password" : "current-password"}
+                enterKeyHint="done"
+                className="pizza-input w-full px-4 py-3 bg-white text-black placeholder-black/30"
+              />
+              <button
+                type="submit"
+                disabled={isPending}
+                className="pizza-btn w-full py-3.5 text-white"
+                style={{ background: "#1a1a1a" }}
+              >
+                {isPending
+                  ? isSignUp ? "creating account..." : "signing in..."
+                  : isSignUp ? "create account" : "sign in"}
+              </button>
+            </form>
+
+            <button
+              type="button"
               onClick={() => setIsSignUp(!isSignUp)}
               disabled={isPending}
-              className="w-full"
+              className="text-xs text-black/40 hover:text-black/70 transition-colors underline underline-offset-2"
+              style={{ fontFamily: "IBM Plex Sans, sans-serif" }}
             >
-              {isSignUp ? "Already have an account? Sign in" : "Need an account? Sign up"}
-            </Button>
+              {isSignUp ? "already have an account? sign in" : "need an account? sign up"}
+            </button>
           </div>
+
+          <div className="flex items-center gap-2 opacity-65">
+            <span className="pizza-label text-white/55">powered by</span>
+            <img
+              src="https://onramp.pingpay.io/ping-pay-logo.png"
+              alt="PingPay"
+              className="pingpay-logo"
+            />
+          </div>
+
         </div>
       </div>
     </div>

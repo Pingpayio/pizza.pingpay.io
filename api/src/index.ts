@@ -36,6 +36,7 @@ export default createPlugin.withPlugins<PluginsClient>()({
     PINGPAY_API_URL: z.string().default("https://pay.pingpay.io/api"),
     PINGPAY_API_KEY: z.string().default(""),
     PINGPAY_WEBHOOK_SECRET: z.string().default(""),
+    HOST_URL: z.string().default(""),
   }),
 
   context: z.object({
@@ -81,6 +82,7 @@ export default createPlugin.withPlugins<PluginsClient>()({
         driver,
         pizzaService,
         webhookSecret: config.secrets.PINGPAY_WEBHOOK_SECRET,
+        hostUrl: config.secrets.HOST_URL || process.env.BETTER_AUTH_URL || "",
       };
     }),
 
@@ -129,7 +131,13 @@ export default createPlugin.withPlugins<PluginsClient>()({
         .handler(async ({ input, context }) => {
           const orderId = generatePizzaOrderId();
           const hostUrl =
-            process.env.HOST_URL || process.env.BETTER_AUTH_URL || "http://localhost:3000";
+            services.hostUrl || new URL(
+              context.reqHeaders?.get("x-forwarded-host")
+                ? `${context.reqHeaders.get("x-forwarded-proto") || "http"}://${context.reqHeaders.get("x-forwarded-host")}`
+                : context.reqHeaders?.get("host")
+                  ? `${context.reqHeaders.get("x-forwarded-proto") || "http"}://${context.reqHeaders.get("host")}`
+                  : "http://localhost:3000"
+            ).origin;
 
           let pingpayResult: Awaited<
             ReturnType<typeof services.pizzaService.createCheckoutSession>
@@ -137,7 +145,7 @@ export default createPlugin.withPlugins<PluginsClient>()({
           try {
             pingpayResult = await services.pizzaService.createCheckoutSession({
               amount: input.amount,
-              asset: { chain: "ETH", symbol: "USDC" },
+              asset: { chain: "NEAR", symbol: "USDC" },
               metadata: { orderId, source: "pizza-demo", name: input.name },
             });
           } catch (error) {
@@ -206,6 +214,41 @@ export default createPlugin.withPlugins<PluginsClient>()({
         };
       }),
 
+      quotePizzaPayment: builder.quotePizzaPayment.handler(async ({ input }) => {
+        const [order] = await services.db
+          .select()
+          .from(pizzaOrders)
+          .where(eq(pizzaOrders.id, input.orderId))
+          .limit(1);
+
+        if (!order) {
+          throw new ORPCError("NOT_FOUND", { message: "Order not found" });
+        }
+
+        if (!order.checkoutSessionId) {
+          throw new ORPCError("BAD_REQUEST", { message: "Order has no checkout session" });
+        }
+
+        let quoteResult: Awaited<ReturnType<typeof services.pizzaService.getQuote>>;
+        try {
+          quoteResult = await services.pizzaService.getQuote({
+            sessionId: order.checkoutSessionId,
+            payerAsset: {
+              amount: order.amount,
+              asset: { chain: input.payerAsset.chain, symbol: input.payerAsset.symbol },
+            },
+          });
+        } catch (error) {
+          console.error("[API] PingPay getQuote failed:", error);
+          throw error;
+        }
+
+        return {
+          quote: quoteResult.quote,
+          feeBreakdown: quoteResult.feeBreakdown,
+        };
+      }),
+
       preparePizzaPayment: builder.preparePizzaPayment.handler(async ({ input }) => {
         const [order] = await services.db
           .select()
@@ -224,7 +267,8 @@ export default createPlugin.withPlugins<PluginsClient>()({
         if (order.depositAddress) {
           return {
             depositAddress: order.depositAddress,
-            amountToDeposit: input.payerAsset.amount,
+            amountToDeposit: order.amount,
+            amountToDepositFormatted: "",
           };
         }
 
@@ -234,7 +278,10 @@ export default createPlugin.withPlugins<PluginsClient>()({
         try {
           prepareResult = await services.pizzaService.preparePayment({
             sessionId: order.checkoutSessionId,
-            payerAsset: input.payerAsset,
+            payerAsset: {
+              amount: order.amount,
+              asset: { chain: input.payerAsset.chain, symbol: input.payerAsset.symbol },
+            },
             payer: { address: "PLACEHOLDER" },
             idempotencyKey,
             paymentMethod: "DEPOSIT",
@@ -246,7 +293,8 @@ export default createPlugin.withPlugins<PluginsClient>()({
 
         const depositAddress =
           prepareResult.depositAddress || prepareResult.payment?.depositAddress || "";
-        const amountToDeposit = prepareResult.quote?.amountIn || input.payerAsset.amount;
+        const amountToDeposit = prepareResult.quote?.amountIn || order.amount;
+        const amountToDepositFormatted = prepareResult.quote?.amountInFormatted || "";
 
         await services.db
           .update(pizzaOrders)
@@ -260,9 +308,47 @@ export default createPlugin.withPlugins<PluginsClient>()({
         return {
           depositAddress,
           amountToDeposit,
+          amountToDepositFormatted,
           quote: prepareResult.quote,
           feeBreakdown: prepareResult.feeBreakdown,
+          transfer: prepareResult.transfer,
         };
+      }),
+
+      notifyPizzaDeposit: builder.notifyPizzaDeposit.handler(async ({ input }) => {
+        const [order] = await services.db
+          .select()
+          .from(pizzaOrders)
+          .where(eq(pizzaOrders.id, input.orderId))
+          .limit(1);
+
+        if (!order) {
+          throw new ORPCError("NOT_FOUND", { message: "Order not found" });
+        }
+
+        if (!order.depositAddress) {
+          throw new ORPCError("BAD_REQUEST", { message: "No deposit address — prepare payment first" });
+        }
+
+        try {
+          const pingpayStatus = await services.pizzaService.getPaymentStatus(order.depositAddress);
+
+          if (pingpayStatus.status === "SUCCESS" && order.status !== "PAID") {
+            await services.db
+              .update(pizzaOrders)
+              .set({ status: "PAID", paidAt: new Date() })
+              .where(eq(pizzaOrders.id, input.orderId));
+            return { status: "PAID", updatedAt: new Date().toISOString() };
+          }
+
+          return {
+            status: pingpayStatus.status || order.status,
+            updatedAt: pingpayStatus.updatedAt,
+          };
+        } catch (error) {
+          console.error("[API] PingPay getPaymentStatus failed:", error);
+          throw error;
+        }
       }),
 
       subscribePizzaOrder: builder.subscribePizzaOrder.handler(async function* ({ input }) {
@@ -324,24 +410,45 @@ export default createPlugin.withPlugins<PluginsClient>()({
           throw new ORPCError("NOT_FOUND", { message: "Order not found" });
         }
 
-        if (order.depositAddress && order.status !== "PAID") {
+        if (order.status === "PAID") {
+          return {
+            status: order.status,
+            updatedAt: order.paidAt instanceof Date ? order.paidAt.toISOString() : undefined,
+          };
+        }
+
+        if (order.checkoutSessionId) {
           try {
-            const pingpayStatus = await services.pizzaService.getPaymentStatus(
-              order.depositAddress,
-            );
-            if (pingpayStatus.status === "SUCCESS" && order.status !== "PAID") {
+            const sessionData = await services.pizzaService.getSession(order.checkoutSessionId);
+            if (sessionData.session.status === "COMPLETED" && order.status !== "PAID") {
               await services.db
                 .update(pizzaOrders)
                 .set({ status: "PAID", paidAt: new Date() })
                 .where(eq(pizzaOrders.id, input.orderId));
               return { status: "PAID", updatedAt: new Date().toISOString() };
             }
-            return {
-              status: pingpayStatus.status || order.status,
-              updatedAt: pingpayStatus.updatedAt,
-            };
+            if (order.depositAddress) {
+              try {
+                const pingpayStatus = await services.pizzaService.getPaymentStatus(
+                  order.depositAddress,
+                );
+                if (pingpayStatus.status === "SUCCESS" && order.status !== "PAID") {
+                  await services.db
+                    .update(pizzaOrders)
+                    .set({ status: "PAID", paidAt: new Date() })
+                    .where(eq(pizzaOrders.id, input.orderId));
+                  return { status: "PAID", updatedAt: new Date().toISOString() };
+                }
+                return {
+                  status: pingpayStatus.status || order.status,
+                  updatedAt: pingpayStatus.updatedAt,
+                };
+              } catch (error) {
+                console.error("[API] PingPay getPaymentStatus failed:", error);
+              }
+            }
           } catch (error) {
-            console.error("[API] PingPay getPaymentStatus failed:", error);
+            console.error("[API] PingPay getSession failed:", error);
           }
         }
 
