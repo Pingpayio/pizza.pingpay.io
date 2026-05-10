@@ -1,0 +1,72 @@
+{
+  "extends": "bos://auth.everything.near/everything.dev",
+  "account": "pay.everything.near",
+  "domain": "pay.everything.dev",
+  "testnet": "dev.allthethings.testnet",
+  "staging": {
+    "domain": "staging.dev.everything.dev"
+  },
+  "repository": "https://github.com/nearbuilders/everything-dev",
+  "app": {
+    "host": {
+      "development": "local:host"
+    },
+    "ui": {
+      "name": "ui",
+      "development": "local:ui"
+    },
+    "api": {
+      "name": "api",
+      "development": "local:api",
+      "secrets": [
+        "API_DATABASE_URL",
+        "PINGPAY_API_URL",
+        "PINGPAY_API_KEY",
+        "PINGPAY_WEBHOOK_SECRET"
+      ]
+    },
+    "auth": {
+      "name": "everything-dev_auth-plugin",
+      "development": "local:plugins/auth",
+      "secrets": [
+        "AUTH_DATABASE_URL",
+        "BETTER_AUTH_SECRET",
+        "CORS_ORIGIN"
+      ]
+    }
+  },
+  "plugins": {},
+  "shared": {
+    "ui": {
+      "effect": {
+        "version": "3.21.0",
+        "requiredVersion": "^3.21.0",
+        "singleton": true,
+        "strictVersion": false,
+        "shareScope": "default"
+      },
+      "zod": {
+        "version": "4.3.6",
+        "requiredVersion": "^4.3.6",
+        "singleton": true,
+        "strictVersion": false,
+        "shareScope": "default"
+      },
+      "@orpc/contract": {
+        "version": "1.13.14",
+        "requiredVersion": "^1.13.14",
+        "singleton": true,
+        "strictVersion": false,
+        "shareScope": "default"
+      },
+      "better-auth": {
+        "version": "1.6.9",
+        "requiredVersion": "^1.6.9",
+        "singleton": true,
+        "strictVersion": false,
+        "shareScope": "default"
+      }
+    },
+    "plugins": {}
+  }
+}
