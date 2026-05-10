@@ -3,7 +3,7 @@ import { createFileRoute, Navigate, redirect, useNavigate } from "@tanstack/reac
 import { useState } from "react";
 import { toast } from "sonner";
 import { type ClientRuntimeConfig, getAuthClient } from "@/app";
-import { PizzaBackground } from "@/components";
+import { BillyBadge, PizzaBackground, isBillysBirthday } from "@/components";
 import { sessionQueryOptions } from "@/lib/session";
 
 function safeRedirectTo(path?: string) {
@@ -153,34 +153,45 @@ function LoginPage() {
     return <Navigate to={safeRedirectTo(redirect)} replace search={{}} />;
   }
 
+  const birthday = isBillysBirthday();
+
   return (
     <div
       className="fixed inset-0 flex flex-col animate-fade-in"
       style={{ background: "linear-gradient(160deg, #c0392b 0%, #922b21 60%, #7b241c 100%)" }}
     >
       <PizzaBackground />
+      <BillyBadge />
 
       <div
-        className="relative z-10 flex flex-col items-center h-full overflow-y-auto overscroll-contain pt-safe pb-safe px-5"
+        className="relative z-10 flex flex-col items-center h-full overflow-y-auto overscroll-contain pb-safe px-5"
         style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
       >
         <div className="flex flex-col items-center w-full max-w-sm min-h-full justify-center gap-8 py-6">
 
-          <div className="flex flex-col items-center gap-3 text-center">
+          <div className="flex flex-col items-center gap-2 text-center">
             <span
               className="text-7xl"
               style={{ filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.4))" }}
             >
               🍕
             </span>
-            <div>
-              <p className="pizza-label text-white/55 mb-1">merchant portal</p>
+            <div className="flex flex-col gap-0.5">
+              <p className="pizza-label text-white/55">Tortorices on Grand Ave</p>
               <h1
                 className="text-5xl font-semibold text-white pizza-display"
                 style={{ textShadow: "rgba(0,0,0,0.25) 2px 2px 0, rgba(0,0,0,0.12) 4px 4px 10px" }}
               >
-                Pizza POS
+                Pizza Pay
               </h1>
+              {birthday && (
+                <p
+                  className="text-white/60 text-sm mt-1"
+                  style={{ fontFamily: "IBM Plex Sans, sans-serif", fontStyle: "italic" }}
+                >
+                  happy birthday Billy 🎂
+                </p>
+              )}
             </div>
           </div>
 
@@ -192,7 +203,7 @@ function LoginPage() {
               className="pizza-btn pizza-btn-primary w-full py-4 text-white"
               style={{ background: "#c0392b" }}
             >
-              {isPending ? "opening register..." : "start taking orders"}
+              {isPending ? "opening register..." : "open up shop"}
             </button>
 
             <div className="flex items-center gap-3">

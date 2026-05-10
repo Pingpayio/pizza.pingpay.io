@@ -2,16 +2,37 @@ import { consumeEventIterator } from "@orpc/client";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PizzaBackground, PizzaPoweredBy } from "@/components";
+import { BillyBadge, PizzaBackground, PizzaPoweredBy } from "@/components";
 import { useApiClient } from "@/lib/use-api-client";
 
 export const Route = createFileRoute("/_layout/pizza/$orderId")({
-  head: () => ({
-    meta: [
-      { title: "Pay for Pizza | PingPay" },
-      { name: "description", content: "Pay for your pizza order" },
-    ],
-  }),
+  loader: async ({ context, params }) => {
+    try {
+      return await context.apiClient.getPizzaOrder({ orderId: params.orderId });
+    } catch {
+      return null;
+    }
+  },
+  head: ({ loaderData }) => {
+    const name = loaderData?.order?.name;
+    const amount = loaderData?.order?.amount
+      ? (Number(loaderData.order.amount) / 1_000_000).toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      : null;
+    const title = name ? `${name} | Pizza Boy Billy | Tortorices` : "Pizza Boy Billy | Tortorices";
+    const description =
+      name && amount
+        ? `Pay ${amount} USDC for ${name}`
+        : "Pay for your pizza order";
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+      ],
+    };
+  },
   component: PizzaPayer,
 });
 
@@ -64,6 +85,7 @@ function CheckIcon() {
 function PizzaPayer() {
   const apiClient = useApiClient();
   const { orderId } = Route.useParams();
+  const loaderData = Route.useLoaderData();
   const [pageStatus, setPageStatus] = useState<PageStatus>("LOADING");
   const [selectedChain, setSelectedChain] = useState("base");
   const [selectedSymbol, setSelectedSymbol] = useState("USDC");
@@ -82,6 +104,7 @@ function PizzaPayer() {
   const { data: orderData, isLoading } = useQuery({
     queryKey: ["pizza-order", orderId],
     queryFn: () => apiClient.getPizzaOrder({ orderId }),
+    initialData: loaderData ?? undefined,
   });
 
   const startSSE = useCallback(() => {
@@ -239,9 +262,10 @@ function PizzaPayer() {
       style={{ background: BG[pageStatus] ?? BG_FALLBACK }}
     >
       <PizzaBackground />
+      <BillyBadge />
 
       <div
-        className="relative z-10 flex flex-col items-center h-full overflow-y-auto overscroll-contain pt-safe pb-safe px-5"
+        className="relative z-10 flex flex-col items-center h-full overflow-y-auto overscroll-contain pb-safe px-5"
         style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
       >
         <div className="flex flex-col items-center w-full max-w-md min-h-full justify-center gap-8 py-6">
@@ -255,14 +279,20 @@ function PizzaPayer() {
                 >
                   🍕
                 </span>
-                <p className="pizza-label text-white/55 mt-1">your order</p>
+                <p className="pizza-label text-white/55 mt-1">pizza boy billy</p>
                 <h2
                   className="text-4xl sm:text-5xl font-semibold text-white pizza-display"
                   style={{ textShadow: "rgba(0,0,0,0.25) 2px 2px 0, rgba(0,0,0,0.1) 4px 4px 12px" }}
                 >
                   {orderData?.order?.name}
                 </h2>
-                <p className="text-4xl font-semibold text-white/90 mt-2 pizza-display">
+                <p
+                  className="text-white/50 text-sm"
+                  style={{ fontFamily: "IBM Plex Sans, sans-serif", fontStyle: "italic" }}
+                >
+                  the man wants to give you a pizza
+                </p>
+                <p className="text-4xl font-semibold text-white/90 mt-1 pizza-display">
                   {formatAmount(orderData?.order?.amount || "0")}
                   <span className="text-xl text-white/60 ml-2">USDC</span>
                 </p>
@@ -319,7 +349,7 @@ function PizzaPayer() {
                 >
                   🍕
                 </span>
-                <p className="pizza-label text-white/55 mt-1">send payment</p>
+                <p className="pizza-label text-white/55 mt-1">pizza is cooking</p>
                 <h2
                   className="text-2xl sm:text-3xl font-semibold text-white pizza-display"
                   style={{ textShadow: "rgba(0,0,0,0.2) 2px 2px 0" }}
@@ -521,8 +551,8 @@ function PizzaPayer() {
                   {formatAmount(orderData?.order?.amount || "0")}
                   <span className="text-lg text-white/60 ml-2">USDC</span>
                 </p>
-                <p className="text-white/45 text-sm mt-1" style={{ fontFamily: "IBM Plex Sans, sans-serif" }}>
-                  enjoy your pizza!
+                <p className="text-white/45 text-sm mt-1" style={{ fontFamily: "IBM Plex Sans, sans-serif", fontStyle: "italic" }}>
+                  made with love at Tortorices 🍕
                 </p>
               </div>
 

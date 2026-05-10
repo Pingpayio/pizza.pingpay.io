@@ -149,7 +149,8 @@ export const contract = oc.router({
   subscribePizzaOrder: oc
     .route({ method: "GET", path: "/pizza/orders/{orderId}/stream" })
     .input(z.object({ orderId: z.string() }))
-    .output(eventIterator(z.object({ status: z.string(), updatedAt: z.string() }))),
+    .output(eventIterator(z.object({ status: z.string(), updatedAt: z.string().optional() })))
+    .errors({ BAD_REQUEST }),
 
   getPizzaOrderStatus: oc
     .route({ method: "GET", path: "/pizza/orders/{orderId}/status" })

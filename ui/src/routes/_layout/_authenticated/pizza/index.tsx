@@ -2,14 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { QRCodeSVG } from "qrcode.react";
 import { useState } from "react";
-import { PizzaBackground, PizzaPoweredBy } from "@/components";
+import { BillyBadge, PizzaBackground, PizzaPoweredBy } from "@/components";
 import { useApiClient } from "@/lib/use-api-client";
 
 export const Route = createFileRoute("/_layout/_authenticated/pizza/")({
   head: () => ({
     meta: [
-      { title: "Pizza POS | PingPay" },
-      { name: "description", content: "Pizza point-of-sale powered by PingPay" },
+      { title: "Pizza Pay | Tortorices on Grand Ave" },
+      { name: "description", content: "Pizza Boy Billy's point of sale — Tortorices on Grand Ave" },
     ],
   }),
   component: PizzaPOS,
@@ -85,8 +85,9 @@ function PizzaPOS() {
       style={{ background: BG[orderStatus] }}
     >
       <PizzaBackground />
+      <BillyBadge />
 
-      <div className="relative z-10 flex flex-col items-center h-full overflow-y-auto overscroll-contain pt-safe pb-safe px-5"
+      <div className="relative z-10 flex flex-col items-center h-full overflow-y-auto overscroll-contain pb-safe px-5"
         style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
       >
         <div className="flex flex-col items-center w-full max-w-md min-h-full justify-center gap-8 py-6">
@@ -100,12 +101,12 @@ function PizzaPOS() {
                 >
                   🍕
                 </span>
-                <p className="pizza-label text-white/55 mt-1">point of sale</p>
+                <p className="pizza-label text-white/55 mt-1">Tortorices on Grand Ave</p>
                 <h1
                   className="text-5xl sm:text-6xl font-semibold text-white pizza-display"
                   style={{ textShadow: "rgba(0,0,0,0.25) 2px 2px 0, rgba(0,0,0,0.1) 4px 4px 12px" }}
                 >
-                  Pizza POS
+                  Pizza Pay
                 </h1>
               </div>
 
@@ -182,7 +183,7 @@ function PizzaPOS() {
           {orderStatus === "WAITING" && qrUrl && (
             <>
               <div className="flex flex-col items-center gap-1 text-center">
-                <p className="pizza-label text-white/55">awaiting payment</p>
+                <p className="pizza-label text-white/55">pizza is cooking</p>
                 <h2
                   className="text-3xl sm:text-4xl font-semibold text-white pizza-display"
                   style={{ textShadow: "rgba(0,0,0,0.2) 2px 2px 0" }}
@@ -203,7 +204,7 @@ function PizzaPOS() {
               </div>
 
               <div className="flex flex-col items-center gap-2">
-                <p className="pizza-label text-white/60">scan to pay</p>
+                <p className="pizza-label text-white/60">scan to pay the man</p>
                 <div className="flex items-center gap-2">
                   <span
                     className="w-2 h-2 rounded-full bg-white animate-waiting-dot"

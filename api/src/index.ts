@@ -58,22 +58,39 @@ export default createPlugin.withPlugins<PluginsClient>()({
 
   initialize: (config, plugins) =>
     Effect.promise(async () => {
-      const { createDatabaseDriver } = await import("./db/index");
-      const driver = await createDatabaseDriver(config.secrets.API_DATABASE_URL);
+      let driver;
+      try {
+        const { createDatabaseDriver } = await import("./db/index");
+        driver = await createDatabaseDriver(config.secrets.API_DATABASE_URL);
+      } catch (cause) {
+        console.error("[API] FATAL: Database driver creation failed:", cause);
+        throw cause;
+      }
 
-      const migrations = await loadMigrations();
-      await migrate(driver.db, migrations);
-      console.log("[API] Migrations applied");
+      try {
+        const migrations = await loadMigrations();
+        await migrate(driver.db, migrations);
+        console.log("[API] Migrations applied");
+      } catch (cause) {
+        console.error("[API] FATAL: Migration failed:", cause);
+        throw cause;
+      }
 
       const { auth, ...restPlugins } = plugins;
       console.log("[API] Services Initialized");
       console.log("[API] Auth client available:", Boolean(auth));
       console.log("[API] Plugins available:", Object.keys(restPlugins).join(", ") || "none");
 
-      const pizzaService = createPingPayService({
-        apiUrl: config.secrets.PINGPAY_API_URL,
-        apiKey: config.secrets.PINGPAY_API_KEY,
-      });
+      let pizzaService;
+      try {
+        pizzaService = createPingPayService({
+          apiUrl: config.secrets.PINGPAY_API_URL,
+          apiKey: config.secrets.PINGPAY_API_KEY,
+        });
+      } catch (cause) {
+        console.error("[API] FATAL: PingPay service creation failed:", cause);
+        throw cause;
+      }
 
       return {
         auth,
@@ -89,7 +106,11 @@ export default createPlugin.withPlugins<PluginsClient>()({
   shutdown: (services) =>
     Effect.promise(async () => {
       console.log("[API] Shutdown");
-      await (services as any).driver?.close?.();
+      try {
+        await (services as any).driver?.close?.();
+      } catch (cause) {
+        console.error("[API] Shutdown error:", cause);
+      }
     }),
 
   createRouter: (services, builder) => {
@@ -150,32 +171,53 @@ export default createPlugin.withPlugins<PluginsClient>()({
             });
           } catch (error) {
             console.error("[API] PingPay createCheckoutSession failed:", error);
-            throw error;
+            if (error instanceof ORPCError) throw error;
+            throw new ORPCError("INTERNAL_SERVER_ERROR", {
+              message: error instanceof Error ? error.message : String(error),
+            });
           }
 
-          await services.db.insert(pizzaOrders).values({
-            id: orderId,
-            userId: context.userId,
-            name: input.name,
-            amount: input.amount,
-            checkoutSessionId: pingpayResult.session.sessionId,
-            status: "CREATED",
-          });
+          try {
+            await services.db.insert(pizzaOrders).values({
+              id: orderId,
+              userId: context.userId,
+              name: input.name,
+              amount: input.amount,
+              checkoutSessionId: pingpayResult.session.sessionId,
+              status: "CREATED",
+            });
+          } catch (error) {
+            console.error("[API] DB insert failed in createPizzaOrder:", error);
+            throw new ORPCError("INTERNAL_SERVER_ERROR", {
+              message: error instanceof Error ? error.message : "Failed to save order",
+            });
+          }
 
           const qrUrl = `${hostUrl}/pizza/${orderId}`;
 
           return { orderId, qrUrl };
         }),
 
-      getPizzaOrder: builder.getPizzaOrder.handler(async ({ input }) => {
-        const [order] = await services.db
-          .select()
-          .from(pizzaOrders)
-          .where(eq(pizzaOrders.id, input.orderId))
-          .limit(1);
+      getPizzaOrder: builder.getPizzaOrder.handler(async ({ input, errors }) => {
+        let order;
+        try {
+          [order] = await services.db
+            .select()
+            .from(pizzaOrders)
+            .where(eq(pizzaOrders.id, input.orderId))
+            .limit(1);
+        } catch (error) {
+          console.error("[API] DB select failed in getPizzaOrder:", error);
+          throw new ORPCError("INTERNAL_SERVER_ERROR", {
+            message: error instanceof Error ? error.message : "Database error loading order",
+          });
+        }
 
         if (!order) {
-          throw new ORPCError("NOT_FOUND", { message: "Order not found" });
+          throw errors.NOT_FOUND({
+            message: "Order not found",
+            data: { resource: "order", resourceId: input.orderId },
+          });
         }
 
         let session = null;
@@ -214,19 +256,33 @@ export default createPlugin.withPlugins<PluginsClient>()({
         };
       }),
 
-      quotePizzaPayment: builder.quotePizzaPayment.handler(async ({ input }) => {
-        const [order] = await services.db
-          .select()
-          .from(pizzaOrders)
-          .where(eq(pizzaOrders.id, input.orderId))
-          .limit(1);
+      quotePizzaPayment: builder.quotePizzaPayment.handler(async ({ input, errors }) => {
+        let order;
+        try {
+          [order] = await services.db
+            .select()
+            .from(pizzaOrders)
+            .where(eq(pizzaOrders.id, input.orderId))
+            .limit(1);
+        } catch (error) {
+          console.error("[API] DB select failed in quotePizzaPayment:", error);
+          throw new ORPCError("INTERNAL_SERVER_ERROR", {
+            message: error instanceof Error ? error.message : "Database error loading order",
+          });
+        }
 
         if (!order) {
-          throw new ORPCError("NOT_FOUND", { message: "Order not found" });
+          throw errors.NOT_FOUND({
+            message: "Order not found",
+            data: { resource: "order", resourceId: input.orderId },
+          });
         }
 
         if (!order.checkoutSessionId) {
-          throw new ORPCError("BAD_REQUEST", { message: "Order has no checkout session" });
+          throw errors.BAD_REQUEST({
+            message: "Order has no checkout session",
+            data: { invalidFields: ["checkoutSessionId"] },
+          });
         }
 
         let quoteResult: Awaited<ReturnType<typeof services.pizzaService.getQuote>>;
@@ -240,7 +296,10 @@ export default createPlugin.withPlugins<PluginsClient>()({
           });
         } catch (error) {
           console.error("[API] PingPay getQuote failed:", error);
-          throw error;
+          if (error instanceof ORPCError) throw error;
+          throw new ORPCError("INTERNAL_SERVER_ERROR", {
+            message: error instanceof Error ? error.message : String(error),
+          });
         }
 
         return {
@@ -249,19 +308,33 @@ export default createPlugin.withPlugins<PluginsClient>()({
         };
       }),
 
-      preparePizzaPayment: builder.preparePizzaPayment.handler(async ({ input }) => {
-        const [order] = await services.db
-          .select()
-          .from(pizzaOrders)
-          .where(eq(pizzaOrders.id, input.orderId))
-          .limit(1);
+      preparePizzaPayment: builder.preparePizzaPayment.handler(async ({ input, errors }) => {
+        let order;
+        try {
+          [order] = await services.db
+            .select()
+            .from(pizzaOrders)
+            .where(eq(pizzaOrders.id, input.orderId))
+            .limit(1);
+        } catch (error) {
+          console.error("[API] DB select failed in preparePizzaPayment:", error);
+          throw new ORPCError("INTERNAL_SERVER_ERROR", {
+            message: error instanceof Error ? error.message : "Database error loading order",
+          });
+        }
 
         if (!order) {
-          throw new ORPCError("NOT_FOUND", { message: "Order not found" });
+          throw errors.NOT_FOUND({
+            message: "Order not found",
+            data: { resource: "order", resourceId: input.orderId },
+          });
         }
 
         if (!order.checkoutSessionId) {
-          throw new ORPCError("BAD_REQUEST", { message: "Order has no checkout session" });
+          throw errors.BAD_REQUEST({
+            message: "Order has no checkout session",
+            data: { invalidFields: ["checkoutSessionId"] },
+          });
         }
 
         if (order.depositAddress) {
@@ -288,7 +361,10 @@ export default createPlugin.withPlugins<PluginsClient>()({
           });
         } catch (error) {
           console.error("[API] PingPay preparePayment failed:", error);
-          throw error;
+          if (error instanceof ORPCError) throw error;
+          throw new ORPCError("INTERNAL_SERVER_ERROR", {
+            message: error instanceof Error ? error.message : String(error),
+          });
         }
 
         const depositAddress =
@@ -296,14 +372,21 @@ export default createPlugin.withPlugins<PluginsClient>()({
         const amountToDeposit = prepareResult.quote?.amountIn || order.amount;
         const amountToDepositFormatted = prepareResult.quote?.amountInFormatted || "";
 
-        await services.db
-          .update(pizzaOrders)
-          .set({
-            depositAddress,
-            paymentId: prepareResult.payment?.paymentId,
-            status: "PENDING",
-          })
-          .where(eq(pizzaOrders.id, input.orderId));
+        try {
+          await services.db
+            .update(pizzaOrders)
+            .set({
+              depositAddress,
+              paymentId: prepareResult.payment?.paymentId,
+              status: "PENDING",
+            })
+            .where(eq(pizzaOrders.id, input.orderId));
+        } catch (error) {
+          console.error("[API] DB update failed in preparePizzaPayment:", error);
+          throw new ORPCError("INTERNAL_SERVER_ERROR", {
+            message: error instanceof Error ? error.message : "Failed to save payment",
+          });
+        }
 
         return {
           depositAddress,
@@ -315,54 +398,97 @@ export default createPlugin.withPlugins<PluginsClient>()({
         };
       }),
 
-      notifyPizzaDeposit: builder.notifyPizzaDeposit.handler(async ({ input }) => {
-        const [order] = await services.db
-          .select()
-          .from(pizzaOrders)
-          .where(eq(pizzaOrders.id, input.orderId))
-          .limit(1);
+      notifyPizzaDeposit: builder.notifyPizzaDeposit.handler(async ({ input, errors }) => {
+        let order;
+        try {
+          [order] = await services.db
+            .select()
+            .from(pizzaOrders)
+            .where(eq(pizzaOrders.id, input.orderId))
+            .limit(1);
+        } catch (error) {
+          console.error("[API] DB select failed in notifyPizzaDeposit:", error);
+          throw new ORPCError("INTERNAL_SERVER_ERROR", {
+            message: error instanceof Error ? error.message : "Database error loading order",
+          });
+        }
 
         if (!order) {
-          throw new ORPCError("NOT_FOUND", { message: "Order not found" });
+          throw errors.NOT_FOUND({
+            message: "Order not found",
+            data: { resource: "order", resourceId: input.orderId },
+          });
         }
 
         if (!order.depositAddress) {
-          throw new ORPCError("BAD_REQUEST", { message: "No deposit address — prepare payment first" });
+          throw errors.BAD_REQUEST({
+            message: "No deposit address — prepare payment first",
+            data: { invalidFields: ["depositAddress"] },
+          });
         }
 
+        let pingpayStatus;
         try {
-          const pingpayStatus = await services.pizzaService.getPaymentStatus(order.depositAddress);
+          pingpayStatus = await services.pizzaService.getPaymentStatus(order.depositAddress);
+        } catch (error) {
+          console.error("[API] PingPay getPaymentStatus failed:", error);
+          if (error instanceof ORPCError) throw error;
+          throw new ORPCError("INTERNAL_SERVER_ERROR", {
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
 
-          if (pingpayStatus.status === "SUCCESS" && order.status !== "PAID") {
+        if (pingpayStatus.status === "SUCCESS" && order.status !== "PAID") {
+          try {
             await services.db
               .update(pizzaOrders)
               .set({ status: "PAID", paidAt: new Date() })
               .where(eq(pizzaOrders.id, input.orderId));
-            return { status: "PAID", updatedAt: new Date().toISOString() };
+          } catch (error) {
+            console.error("[API] DB update failed in notifyPizzaDeposit:", error);
           }
-
-          return {
-            status: pingpayStatus.status || order.status,
-            updatedAt: pingpayStatus.updatedAt,
-          };
-        } catch (error) {
-          console.error("[API] PingPay getPaymentStatus failed:", error);
-          throw error;
+          return { status: "PAID", updatedAt: new Date().toISOString() };
         }
+
+        return {
+          status: pingpayStatus.status || order.status,
+          updatedAt: pingpayStatus.updatedAt,
+        };
       }),
 
-      subscribePizzaOrder: builder.subscribePizzaOrder.handler(async function* ({ input }) {
-        const [order] = await services.db
-          .select()
-          .from(pizzaOrders)
-          .where(eq(pizzaOrders.id, input.orderId))
-          .limit(1);
-
-        if (!order?.depositAddress) {
-          throw new ORPCError("BAD_REQUEST", { message: "No deposit address for this order" });
+      subscribePizzaOrder: builder.subscribePizzaOrder.handler(async function* ({ input, errors }) {
+        let order;
+        try {
+          [order] = await services.db
+            .select()
+            .from(pizzaOrders)
+            .where(eq(pizzaOrders.id, input.orderId))
+            .limit(1);
+        } catch (error) {
+          console.error("[API] DB select failed in subscribePizzaOrder:", error);
+          throw new ORPCError("INTERNAL_SERVER_ERROR", {
+            message: error instanceof Error ? error.message : "Database error loading order",
+          });
         }
 
-        const stream = await services.pizzaService.streamPaymentStatus(order.depositAddress);
+        if (!order?.depositAddress) {
+          throw errors.BAD_REQUEST({
+            message: "No deposit address for this order",
+            data: { invalidFields: ["depositAddress"] },
+          });
+        }
+
+        let stream: ReadableStream<Uint8Array>;
+        try {
+          stream = await services.pizzaService.streamPaymentStatus(order.depositAddress);
+        } catch (error) {
+          console.error("[API] streamPaymentStatus failed:", error);
+          if (error instanceof ORPCError) throw error;
+          throw new ORPCError("INTERNAL_SERVER_ERROR", {
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+
         const reader = stream.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
@@ -378,19 +504,30 @@ export default createPlugin.withPlugins<PluginsClient>()({
 
             for (const line of lines) {
               if (line.startsWith("data: ")) {
+                let event;
                 try {
                   const raw = JSON.parse(line.slice(6));
-                  const event = raw.result || raw;
-                  yield { status: event.status, updatedAt: event.updatedAt };
+                  event = raw.result || raw;
+                } catch {
+                  continue;
+                }
 
-                  if (event.status === "SUCCESS") {
+                yield {
+                  status: event.status,
+                  updatedAt: event.updatedAt,
+                };
+
+                if (event.status === "SUCCESS") {
+                  try {
                     await services.db
                       .update(pizzaOrders)
                       .set({ status: "PAID", paidAt: new Date() })
                       .where(eq(pizzaOrders.id, input.orderId));
-                    return;
+                  } catch (error) {
+                    console.error("[API] DB update failed in subscribePizzaOrder:", error);
                   }
-                } catch {}
+                  return;
+                }
               }
             }
           }
@@ -399,15 +536,26 @@ export default createPlugin.withPlugins<PluginsClient>()({
         }
       }),
 
-      getPizzaOrderStatus: builder.getPizzaOrderStatus.handler(async ({ input }) => {
-        const [order] = await services.db
-          .select()
-          .from(pizzaOrders)
-          .where(eq(pizzaOrders.id, input.orderId))
-          .limit(1);
+      getPizzaOrderStatus: builder.getPizzaOrderStatus.handler(async ({ input, errors }) => {
+        let order;
+        try {
+          [order] = await services.db
+            .select()
+            .from(pizzaOrders)
+            .where(eq(pizzaOrders.id, input.orderId))
+            .limit(1);
+        } catch (error) {
+          console.error("[API] DB select failed in getPizzaOrderStatus:", error);
+          throw new ORPCError("INTERNAL_SERVER_ERROR", {
+            message: error instanceof Error ? error.message : "Database error loading order",
+          });
+        }
 
         if (!order) {
-          throw new ORPCError("NOT_FOUND", { message: "Order not found" });
+          throw errors.NOT_FOUND({
+            message: "Order not found",
+            data: { resource: "order", resourceId: input.orderId },
+          });
         }
 
         if (order.status === "PAID") {
@@ -421,10 +569,14 @@ export default createPlugin.withPlugins<PluginsClient>()({
           try {
             const sessionData = await services.pizzaService.getSession(order.checkoutSessionId);
             if (sessionData.session.status === "COMPLETED" && order.status !== "PAID") {
-              await services.db
-                .update(pizzaOrders)
-                .set({ status: "PAID", paidAt: new Date() })
-                .where(eq(pizzaOrders.id, input.orderId));
+              try {
+                await services.db
+                  .update(pizzaOrders)
+                  .set({ status: "PAID", paidAt: new Date() })
+                  .where(eq(pizzaOrders.id, input.orderId));
+              } catch (error) {
+                console.error("[API] DB update failed in getPizzaOrderStatus (session COMPLETED):", error);
+              }
               return { status: "PAID", updatedAt: new Date().toISOString() };
             }
             if (order.depositAddress) {
@@ -433,10 +585,14 @@ export default createPlugin.withPlugins<PluginsClient>()({
                   order.depositAddress,
                 );
                 if (pingpayStatus.status === "SUCCESS" && order.status !== "PAID") {
-                  await services.db
-                    .update(pizzaOrders)
-                    .set({ status: "PAID", paidAt: new Date() })
-                    .where(eq(pizzaOrders.id, input.orderId));
+                  try {
+                    await services.db
+                      .update(pizzaOrders)
+                      .set({ status: "PAID", paidAt: new Date() })
+                      .where(eq(pizzaOrders.id, input.orderId));
+                  } catch (error) {
+                    console.error("[API] DB update failed in getPizzaOrderStatus (pingpay SUCCESS):", error);
+                  }
                   return { status: "PAID", updatedAt: new Date().toISOString() };
                 }
                 return {
@@ -458,7 +614,7 @@ export default createPlugin.withPlugins<PluginsClient>()({
         };
       }),
 
-      pingpayWebhook: builder.pingpayWebhook.handler(async ({ input, context }) => {
+      pingpayWebhook: builder.pingpayWebhook.handler(async ({ input, context, errors }) => {
         const signature = context.reqHeaders?.get("x-ping-signature") || "";
         const timestamp = context.reqHeaders?.get("x-ping-timestamp") || "";
         const body = (await context.getRawBody?.()) ?? JSON.stringify(input as unknown);
@@ -470,8 +626,9 @@ export default createPlugin.withPlugins<PluginsClient>()({
           webhookResult = verifyAndParseWebhook(body, signature, timestamp, services.webhookSecret);
         } catch (error) {
           console.error("[PingPay Webhook] Verification failed:", error);
-          throw new ORPCError("BAD_REQUEST", {
+          throw errors.BAD_REQUEST({
             message: error instanceof Error ? error.message : "Webhook verification failed",
+            data: {},
           });
         }
 
@@ -480,21 +637,29 @@ export default createPlugin.withPlugins<PluginsClient>()({
         let order: typeof pizzaOrders.$inferSelect | null = null;
 
         if (orderId) {
-          const [found] = await services.db
-            .select()
-            .from(pizzaOrders)
-            .where(eq(pizzaOrders.id, orderId))
-            .limit(1);
-          order = found ?? null;
+          try {
+            const [found] = await services.db
+              .select()
+              .from(pizzaOrders)
+              .where(eq(pizzaOrders.id, orderId))
+              .limit(1);
+            order = found ?? null;
+          } catch (error) {
+            console.error("[PingPay Webhook] DB select by orderId failed:", error);
+          }
         }
 
         if (!order && sessionId) {
-          const [found] = await services.db
-            .select()
-            .from(pizzaOrders)
-            .where(eq(pizzaOrders.checkoutSessionId, sessionId))
-            .limit(1);
-          order = found ?? null;
+          try {
+            const [found] = await services.db
+              .select()
+              .from(pizzaOrders)
+              .where(eq(pizzaOrders.checkoutSessionId, sessionId))
+              .limit(1);
+            order = found ?? null;
+          } catch (error) {
+            console.error("[PingPay Webhook] DB select by sessionId failed:", error);
+          }
         }
 
         if (!order) {
@@ -516,20 +681,28 @@ export default createPlugin.withPlugins<PluginsClient>()({
               return { received: true };
             }
 
-            await services.db
-              .update(pizzaOrders)
-              .set({ status: "PAID", paidAt: new Date() })
-              .where(eq(pizzaOrders.id, order.id));
-            console.log("[PingPay Webhook] Updated order to PAID", { orderId: order.id });
+            try {
+              await services.db
+                .update(pizzaOrders)
+                .set({ status: "PAID", paidAt: new Date() })
+                .where(eq(pizzaOrders.id, order.id));
+              console.log("[PingPay Webhook] Updated order to PAID", { orderId: order.id });
+            } catch (error) {
+              console.error("[PingPay Webhook] DB update to PAID failed:", error);
+            }
             break;
           }
 
           case "payment.failed": {
-            await services.db
-              .update(pizzaOrders)
-              .set({ status: "FAILED" })
-              .where(eq(pizzaOrders.id, order.id));
-            console.log("[PingPay Webhook] Updated order to FAILED", { orderId: order.id });
+            try {
+              await services.db
+                .update(pizzaOrders)
+                .set({ status: "FAILED" })
+                .where(eq(pizzaOrders.id, order.id));
+              console.log("[PingPay Webhook] Updated order to FAILED", { orderId: order.id });
+            } catch (error) {
+              console.error("[PingPay Webhook] DB update to FAILED failed:", error);
+            }
             break;
           }
 

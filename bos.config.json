@@ -1,7 +1,7 @@
 {
   "extends": "bos://auth.everything.near/everything.dev",
   "account": "work.efiz.near",
-  "domain": "pay.everything.dev",
+  "domain": "pizza.pingpay.io",
   "testnet": "dev.allthethings.testnet",
   "staging": {
     "domain": "staging.dev.everything.dev"
@@ -14,9 +14,9 @@
     "ui": {
       "name": "ui",
       "development": "local:ui",
-      "production": "https://elliot-braem-3360-ui-monorepo-elliot-braem-4d2ae3255-ze.zephyrcloud.app",
-      "integrity": "sha384-JWGvxK9QoLMcSdbs2ms2F7T3HYFPuQnSi/U2GQsJf5FefZwRgHCUmMvRBjiZ5W29",
-      "ssr": "https://elliot-braem-3361-ui-monorepo-elliot-braem-e4be927bc-ze.zephyrcloud.app"
+      "production": "https://elliot-braem-3398-ui-monorepo-elliot-braem-1cb442d94-ze.zephyrcloud.app",
+      "integrity": "sha384-g+zFXptf8AB7O1nqQFO0lrgML+xGnfs39Kt7x+vc8UPS0zXsJo/ZBpZSvldmSZEg",
+      "ssr": "https://elliot-braem-3399-ui-monorepo-elliot-braem-e7aecd76c-ze.zephyrcloud.app"
     },
     "api": {
       "name": "api",
@@ -27,7 +27,7 @@
         "PINGPAY_API_KEY",
         "PINGPAY_WEBHOOK_SECRET"
       ],
-      "production": "https://elliot-braem-3362-api-monorepo-elliot-braem-a5c64b962-ze.zephyrcloud.app",
+      "production": "https://elliot-braem-3400-api-monorepo-elliot-braem-ad0cd00b5-ze.zephyrcloud.app",
       "integrity": "sha384-aDDXp++RUTuEh37eCigMug7zlqwWcV8G9a/xNrr2HziTIoDunhquf1x3gtbBiPIV"
     },
     "auth": {

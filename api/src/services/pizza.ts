@@ -93,14 +93,27 @@ function createPingPayService(config: PingPayConfig) {
 
   async function pingpayFetch(path: string, options: RequestInit = {}): Promise<Response> {
     const url = `${apiUrl}${path}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        ...options.headers,
-      },
-    });
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          ...options.headers,
+        },
+      });
+    } catch (cause) {
+      throw new ORPCError("CONNECTION_ERROR", {
+        message: `PingPay unreachable: ${cause instanceof Error ? cause.message : String(cause)}`,
+        data: {
+          errorCode: "PINGPAY_NETWORK_ERROR",
+          host: apiUrl,
+          suggestion: "Check your internet connection or PingPay service availability",
+        },
+        cause: cause instanceof Error ? cause : undefined,
+      });
+    }
     if (!response.ok) {
       const body = (await response
         .json()
@@ -184,7 +197,11 @@ function createPingPayService(config: PingPayConfig) {
           message: `PingPay SSE HTTP ${response.status}`,
           data: { errorCode: `PINGPAY_SSE_HTTP_${response.status}`, host: apiUrl },
         });
-      if (!response.body) throw new Error("No response body for SSE stream");
+      if (!response.body)
+        throw new ORPCError("CONNECTION_ERROR", {
+          message: "No response body for SSE stream",
+          data: { errorCode: "PINGPAY_SSE_NO_BODY", host: apiUrl },
+        });
       return response.body;
     });
   }
