@@ -1,9 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { QRCodeSVG } from "qrcode.react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BillyBadge, PizzaBackground, PizzaPoweredBy } from "@/components";
 import { useApiClient } from "@/lib/use-api-client";
+
+const SPECIALS = [
+  "Deep Dish with the Caramelized Crust",
+  "Thin Crust with the Hot Honey",
+  "Gucci's Signature Buffalo Wings",
+  "Jalapeño Poppers with the Marinara & Ranch",
+  "Crispy and Fresh Chicken Caesar Salad",
+  "Next Level Mozzarella Sticks & Marinara",
+];
 
 export const Route = createFileRoute("/_layout/_authenticated/pizza/")({
   head: () => ({
@@ -28,8 +37,21 @@ const BG: Record<OrderStatus, string> = {
 function PizzaPOS() {
   const apiClient = useApiClient();
   const queryClient = useQueryClient();
-  const [name, setName] = useState("Pizza Margherita");
+  const [name, setName] = useState("");
   const [amount, setAmount] = useState("15");
+  const [specialIndex, setSpecialIndex] = useState(0);
+  const [placeholderVisible, setPlaceholderVisible] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderVisible(false);
+      setTimeout(() => {
+        setSpecialIndex((i) => (i + 1) % SPECIALS.length);
+        setPlaceholderVisible(true);
+      }, 400);
+    }, 2800);
+    return () => clearInterval(interval);
+  }, []);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [orderStatus, setOrderStatus] = useState<OrderStatus>("IDLE");
@@ -115,17 +137,32 @@ function PizzaPOS() {
                   <label htmlFor="order-name" className="pizza-label text-black/45">
                     order name
                   </label>
-                  <input
-                    id="order-name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Pizza Margherita"
-                    autoComplete="off"
-                    autoCapitalize="words"
-                    enterKeyHint="next"
-                    className="pizza-input w-full px-4 py-3 bg-white text-black placeholder-black/30"
-                  />
+                  <div className="relative">
+                    <input
+                      id="order-name"
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder=""
+                      autoComplete="off"
+                      autoCapitalize="words"
+                      enterKeyHint="next"
+                      className="pizza-input w-full px-4 py-3 bg-white text-black"
+                    />
+                    {!name && (
+                      <span
+                        className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-black/30 truncate max-w-[calc(100%-2rem)]"
+                        style={{
+                          fontFamily: "IBM Plex Sans, sans-serif",
+                          fontSize: "1rem",
+                          transition: "opacity 0.4s ease",
+                          opacity: placeholderVisible ? 1 : 0,
+                        }}
+                      >
+                        {SPECIALS[specialIndex]}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-2">

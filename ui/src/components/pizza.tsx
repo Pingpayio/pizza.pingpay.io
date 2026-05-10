@@ -25,6 +25,25 @@ export function PizzaBackground() {
           {emoji}
         </span>
       ))}
+      <div
+        className="absolute bottom-6 inset-x-0 flex items-center justify-center px-6"
+        style={{ pointerEvents: "none" }}
+      >
+        <p
+          className="pizza-display text-center"
+          style={{
+            fontFamily: "Fredoka, sans-serif",
+            fontWeight: 600,
+            fontSize: "clamp(0.85rem, 3.5vw, 1.1rem)",
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            color: "rgba(255,255,255,0.07)",
+            userSelect: "none",
+          }}
+        >
+          Often Imitated Never Duplicated
+        </p>
+      </div>
     </div>
   );
 }

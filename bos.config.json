@@ -14,8 +14,8 @@
     "ui": {
       "name": "ui",
       "development": "local:ui",
-      "production": "https://elliot-braem-3398-ui-monorepo-elliot-braem-1cb442d94-ze.zephyrcloud.app",
-      "integrity": "sha384-g+zFXptf8AB7O1nqQFO0lrgML+xGnfs39Kt7x+vc8UPS0zXsJo/ZBpZSvldmSZEg",
+      "production": "https://elliot-braem-3443-ui-monorepo-elliot-braem-b385841bd-ze.zephyrcloud.app",
+      "integrity": "sha384-lP/5PxclW8NhqdgjOfaqj0ZD0kYlPWwOO4bkg8eE3yfoKuf6rghNpXSsC92ncL3S",
       "ssr": "https://elliot-braem-3399-ui-monorepo-elliot-braem-e7aecd76c-ze.zephyrcloud.app"
     },
     "api": {
