@@ -9,6 +9,10 @@
 
 <h1>Pizza Pay</h1>
 
+<p><strong>Pizza Pay — Powered by PingPay</strong></p>
+
+<p><a href="https://pizza.pingpay.io">pizza.pingpay.io</a></p>
+
 A white label implementation of PingPay for P2P point-of-sale pizza purchases.
 
 </div>
