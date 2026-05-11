@@ -1,3 +1,4 @@
+export { BillyBadge, isBillysBirthday, PizzaBackground, PizzaPoweredBy } from "./pizza";
 export { Badge } from "./ui/badge";
 export { Button } from "./ui/button";
 export {
@@ -25,4 +26,3 @@ export { Label } from "./ui/label";
 export { ScrollArea, ScrollBar } from "./ui/scroll-area";
 export { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 export { UnderConstruction } from "./under-construction";
-export { PizzaBackground, PizzaPoweredBy, BillyBadge, isBillysBirthday } from "./pizza";

@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Navigate, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { BillyBadge, PizzaBackground, isBillysBirthday } from "@/components";
+import { BillyBadge, isBillysBirthday, PizzaBackground } from "@/components";
 import { sessionQueryKey, sessionQueryOptions, useAuthClient } from "@/lib/auth";
 
 function safeRedirectTo(path?: string) {
@@ -164,12 +164,8 @@ function LoginPage() {
         style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
       >
         <div className="flex flex-col items-center w-full max-w-sm min-h-full justify-center gap-8 py-6">
-
           <div className="flex flex-col items-center gap-2 text-center">
-            <span
-              className="text-7xl"
-              style={{ filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.4))" }}
-            >
+            <span className="text-7xl" style={{ filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.4))" }}>
               🍕
             </span>
             <div className="flex flex-col gap-0.5">
@@ -191,7 +187,10 @@ function LoginPage() {
             </div>
           </div>
 
-          <div className="pizza-card w-full p-6 flex flex-col gap-4" style={{ background: "#fffde7" }}>
+          <div
+            className="pizza-card w-full p-6 flex flex-col gap-4"
+            style={{ background: "#fffde7" }}
+          >
             <button
               type="button"
               onClick={handleAnonymous}
@@ -235,8 +234,12 @@ function LoginPage() {
                 style={{ background: "#1a1a1a" }}
               >
                 {isPending
-                  ? isSignUp ? "creating account..." : "signing in..."
-                  : isSignUp ? "create account" : "sign in"}
+                  ? isSignUp
+                    ? "creating account..."
+                    : "signing in..."
+                  : isSignUp
+                    ? "create account"
+                    : "sign in"}
               </button>
             </form>
 
@@ -259,7 +262,6 @@ function LoginPage() {
               className="pingpay-logo"
             />
           </div>
-
         </div>
       </div>
     </div>

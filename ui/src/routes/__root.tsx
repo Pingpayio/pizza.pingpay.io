@@ -12,7 +12,7 @@ import { getSocialImageMeta } from "everything-dev/ui/metadata";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import type { RouterContext } from "@/app";
-import { getAppName, getBaseStyles, getRuntimeBasePath } from "@/app";
+import { getBaseStyles, getRuntimeBasePath } from "@/app";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 
 export const Route = createRootRouteWithContext<RouterContext>()({
@@ -47,11 +47,11 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     const siteUrl = runtimeConfig?.hostUrl
       ? `${runtimeConfig.hostUrl}${runtimeBasePath === "/" ? "" : runtimeBasePath}`
       : "";
-    const title = getAppName(runtimeConfig);
+    const title = "Pizza Pay";
     const description =
-      "Pay for your pizza with crypto — Pizza Boy Billy at Tortorices on Grand Ave.";
+      "Pay for your pizza with crypto — Pizza Boy Billy at Tortorices on Grand Ave. Powered by Ping.";
     const siteName = title;
-    const ogImage = `${assetsUrl}/metadata.png`;
+    const ogImage = `${assetsUrl}/metadata.jpg`;
 
     const structuredData = {
       "@context": "https://schema.org",
@@ -86,7 +86,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
           description,
           siteName,
           siteUrl,
-          alt: "app preview",
+          alt: "Pizza Pay",
         }),
       ],
       links: [

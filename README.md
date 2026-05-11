@@ -5,7 +5,7 @@
 
 <div align="center">
 
-<img src="ui/public/metadata.png" alt="Pizza Pay" width="600" />
+<img src="ui/public/metadata.jpg" alt="Pizza Pay" width="600" />
 
 <h1>Pizza Pay</h1>
 

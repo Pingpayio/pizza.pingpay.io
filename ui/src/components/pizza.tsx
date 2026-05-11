@@ -1,10 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 
 const BG_EMOJIS = [
-  { emoji: "🍕", top: 8,  left: 5,  rotate: -12, size: 4   },
-  { emoji: "🧀", top: 75, left: 85, rotate: 18,  size: 3.2 },
-  { emoji: "🍅", top: 35, left: 50, rotate: -6,  size: 5   },
-  { emoji: "🌶️", top: 88, left: 12, rotate: 22,  size: 3.5 },
+  { emoji: "🍕", top: 8, left: 5, rotate: -12, size: 4 },
+  { emoji: "🧀", top: 75, left: 85, rotate: 18, size: 3.2 },
+  { emoji: "🍅", top: 35, left: 50, rotate: -6, size: 5 },
+  { emoji: "🌶️", top: 88, left: 12, rotate: 22, size: 3.5 },
   { emoji: "🫒", top: 60, left: 78, rotate: -28, size: 4.5 },
 ] as const;
 
@@ -112,9 +112,7 @@ export function BillyBadge() {
         >
           BILLY
         </span>
-        {isBillysBirthday() && (
-          <span style={{ marginLeft: "0.4em", fontSize: "1rem" }}>🎂</span>
-        )}
+        {isBillysBirthday() && <span style={{ marginLeft: "0.4em", fontSize: "1rem" }}>🎂</span>}
       </Link>
     </div>
   );

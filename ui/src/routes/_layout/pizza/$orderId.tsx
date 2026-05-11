@@ -25,13 +25,15 @@ export const Route = createFileRoute("/_layout/pizza/$orderId")({
     const title = name ? `${name} | Pizza Pay` : "Pizza Pay";
     const description =
       name && amount
-        ? `Pay ${amount} USDC for ${name} — Pizza Boy Billy at Tortorices on Grand Ave`
-        : "Pay for your pizza order — Pizza Boy Billy at Tortorices on Grand Ave";
-    const rootMatch = matches[0] as { loaderData?: { assetsUrl?: string; runtimeConfig?: { hostUrl?: string } } } | undefined;
+        ? `Pay ${amount} USDC for ${name} — Pizza Boy Billy at Tortorices on Grand Ave. Powered by Ping.`
+        : "Pay for your pizza order — Pizza Boy Billy at Tortorices on Grand Ave. Powered by Ping.";
+    const rootMatch = matches[0] as
+      | { loaderData?: { assetsUrl?: string; runtimeConfig?: { hostUrl?: string } } }
+      | undefined;
     const assetsUrl = rootMatch?.loaderData?.assetsUrl ?? "";
     const hostUrl = rootMatch?.loaderData?.runtimeConfig?.hostUrl ?? "";
     const siteUrl = hostUrl ? `${hostUrl}/pizza/${params.orderId}` : "";
-    const ogImage = `${assetsUrl}/metadata.png`;
+    const ogImage = `${assetsUrl}/metadata.jpg`;
     return {
       meta: [
         { title },
@@ -63,13 +65,13 @@ interface TokenOption {
 }
 
 const BG: Partial<Record<PageStatus, string>> = {
-  LOADING:   "linear-gradient(160deg, #d35400 0%, #a04000 55%, #884000 100%)",
-  ORDER:     "linear-gradient(160deg, #d35400 0%, #a04000 55%, #884000 100%)",
-  QUOTING:   "linear-gradient(160deg, #b7770d 0%, #9a6310 55%, #7d5012 100%)",
-  DEPOSIT:   "linear-gradient(160deg, #b7770d 0%, #9a6310 55%, #7d5012 100%)",
+  LOADING: "linear-gradient(160deg, #d35400 0%, #a04000 55%, #884000 100%)",
+  ORDER: "linear-gradient(160deg, #d35400 0%, #a04000 55%, #884000 100%)",
+  QUOTING: "linear-gradient(160deg, #b7770d 0%, #9a6310 55%, #7d5012 100%)",
+  DEPOSIT: "linear-gradient(160deg, #b7770d 0%, #9a6310 55%, #7d5012 100%)",
   VERIFYING: "linear-gradient(160deg, #b7770d 0%, #9a6310 55%, #7d5012 100%)",
-  PAID:      "linear-gradient(160deg, #1e8449 0%, #196f3d 60%, #145a32 100%)",
-  ERROR:     "linear-gradient(160deg, #922b21 0%, #7b241c 55%, #641e16 100%)",
+  PAID: "linear-gradient(160deg, #1e8449 0%, #196f3d 60%, #145a32 100%)",
+  ERROR: "linear-gradient(160deg, #922b21 0%, #7b241c 55%, #641e16 100%)",
 };
 
 const BG_FALLBACK = BG.ORDER as string;
@@ -81,7 +83,17 @@ function formatAmount(raw: string) {
 
 function ClipboardIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
       <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
     </svg>
@@ -90,7 +102,17 @@ function ClipboardIcon() {
 
 function CheckIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <polyline points="20 6 9 17 4 12" />
     </svg>
   );
@@ -177,9 +199,7 @@ function PizzaPayer() {
   useEffect(() => {
     if (orderData?.config?.tokens) {
       const tokens = orderData.config.tokens as TokenOption[];
-      const baseUsdc = tokens.find(
-        (t) => t.chain?.toLowerCase() === "base" && t.symbol === "USDC",
-      );
+      const baseUsdc = tokens.find((t) => t.chain?.toLowerCase() === "base" && t.symbol === "USDC");
       if (baseUsdc) {
         setSelectedChain("base");
         setSelectedSymbol("USDC");
@@ -283,7 +303,6 @@ function PizzaPayer() {
         style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
       >
         <div className="flex flex-col items-center w-full max-w-md min-h-full justify-center gap-8 py-6">
-
           {(pageStatus === "ORDER" || pageStatus === "QUOTING") && (
             <>
               <div className="flex flex-col items-center gap-2 text-center">
@@ -312,7 +331,10 @@ function PizzaPayer() {
                 </p>
               </div>
 
-              <div className="pizza-card w-full p-6 flex flex-col gap-5" style={{ background: "#fffde7" }}>
+              <div
+                className="pizza-card w-full p-6 flex flex-col gap-5"
+                style={{ background: "#fffde7" }}
+              >
                 <div className="flex flex-col gap-2">
                   <label htmlFor="token-select" className="pizza-label text-black/45">
                     pay with
@@ -331,7 +353,8 @@ function PizzaPayer() {
                       <optgroup key={chain} label={chain.toUpperCase()}>
                         {chainTokens.map((t) => (
                           <option key={`${chain}:${t.symbol}`} value={`${chain}:${t.symbol}`}>
-                            {t.symbol}{t.name ? ` — ${t.name}` : ""}
+                            {t.symbol}
+                            {t.name ? ` — ${t.name}` : ""}
                           </option>
                         ))}
                       </optgroup>
@@ -372,7 +395,10 @@ function PizzaPayer() {
                 </h2>
               </div>
 
-              <div className="pizza-card w-full p-5 flex flex-col gap-4" style={{ background: "#fffde7" }}>
+              <div
+                className="pizza-card w-full p-5 flex flex-col gap-4"
+                style={{ background: "#fffde7" }}
+              >
                 <div className="flex flex-col gap-1">
                   <p className="pizza-label text-black/45">send exactly</p>
                   <div className="flex items-center gap-2">
@@ -385,14 +411,16 @@ function PizzaPayer() {
                       onClick={copyAmount}
                       aria-label={copiedAmount ? "Copied!" : "Copy amount"}
                       className="shrink-0 flex items-center justify-center rounded-full transition-colors"
-                      style={{
-                        minWidth: 36,
-                        minHeight: 36,
-                        background: copiedAmount ? "#1e8449" : "rgba(0,0,0,0.08)",
-                        color: copiedAmount ? "white" : "rgba(0,0,0,0.45)",
-                        touchAction: "manipulation",
-                        WebkitTapHighlightColor: "transparent",
-                      } as React.CSSProperties}
+                      style={
+                        {
+                          minWidth: 36,
+                          minHeight: 36,
+                          background: copiedAmount ? "#1e8449" : "rgba(0,0,0,0.08)",
+                          color: copiedAmount ? "white" : "rgba(0,0,0,0.45)",
+                          touchAction: "manipulation",
+                          WebkitTapHighlightColor: "transparent",
+                        } as React.CSSProperties
+                      }
                     >
                       {copiedAmount ? <CheckIcon /> : <ClipboardIcon />}
                     </button>
@@ -405,12 +433,18 @@ function PizzaPayer() {
                 {(rateDisplay || feeDisplay) && (
                   <div className="flex flex-wrap gap-x-4 gap-y-1">
                     {rateDisplay && (
-                      <p className="text-xs text-black/40" style={{ fontFamily: "IBM Plex Mono, monospace" }}>
+                      <p
+                        className="text-xs text-black/40"
+                        style={{ fontFamily: "IBM Plex Mono, monospace" }}
+                      >
                         {rateDisplay}
                       </p>
                     )}
                     {feeDisplay && (
-                      <p className="text-xs text-black/40" style={{ fontFamily: "IBM Plex Mono, monospace" }}>
+                      <p
+                        className="text-xs text-black/40"
+                        style={{ fontFamily: "IBM Plex Mono, monospace" }}
+                      >
                         fee: {feeDisplay}
                       </p>
                     )}
@@ -425,12 +459,14 @@ function PizzaPayer() {
                   >
                     <code
                       className="flex-1 text-xs text-black/75 break-all leading-relaxed px-3 py-3 select-all"
-                      style={{
-                        fontFamily: "IBM Plex Mono, monospace",
-                        background: "#f0e8c0",
-                        userSelect: "all",
-                        WebkitUserSelect: "all",
-                      } as React.CSSProperties}
+                      style={
+                        {
+                          fontFamily: "IBM Plex Mono, monospace",
+                          background: "#f0e8c0",
+                          userSelect: "all",
+                          WebkitUserSelect: "all",
+                        } as React.CSSProperties
+                      }
                     >
                       {depositAddress}
                     </code>
@@ -439,14 +475,16 @@ function PizzaPayer() {
                       onClick={copyAddress}
                       aria-label={copied ? "Copied!" : "Copy address"}
                       className="shrink-0 flex items-center justify-center transition-colors"
-                      style={{
-                        minWidth: 48,
-                        minHeight: 48,
-                        background: copied ? "#1e8449" : "#d35400",
-                        color: "white",
-                        touchAction: "manipulation",
-                        WebkitTapHighlightColor: "transparent",
-                      } as React.CSSProperties}
+                      style={
+                        {
+                          minWidth: 48,
+                          minHeight: 48,
+                          background: copied ? "#1e8449" : "#d35400",
+                          color: "white",
+                          touchAction: "manipulation",
+                          WebkitTapHighlightColor: "transparent",
+                        } as React.CSSProperties
+                      }
                     >
                       {copied ? <CheckIcon /> : <ClipboardIcon />}
                     </button>
@@ -498,19 +536,23 @@ function PizzaPayer() {
                       onClick={copyAmount}
                       aria-label={copiedAmount ? "Copied!" : "Copy amount"}
                       className="shrink-0 flex items-center justify-center rounded-full transition-colors"
-                      style={{
-                        minWidth: 36,
-                        minHeight: 36,
-                        background: copiedAmount ? "#1e8449" : "rgba(0,0,0,0.08)",
-                        color: copiedAmount ? "white" : "rgba(0,0,0,0.45)",
-                        touchAction: "manipulation",
-                        WebkitTapHighlightColor: "transparent",
-                      } as React.CSSProperties}
+                      style={
+                        {
+                          minWidth: 36,
+                          minHeight: 36,
+                          background: copiedAmount ? "#1e8449" : "rgba(0,0,0,0.08)",
+                          color: copiedAmount ? "white" : "rgba(0,0,0,0.45)",
+                          touchAction: "manipulation",
+                          WebkitTapHighlightColor: "transparent",
+                        } as React.CSSProperties
+                      }
                     >
                       {copiedAmount ? <CheckIcon /> : <ClipboardIcon />}
                     </button>
                   </div>
-                  <p className="pizza-label text-black/40 mt-0.5">on {selectedChain.toUpperCase()}</p>
+                  <p className="pizza-label text-black/40 mt-0.5">
+                    on {selectedChain.toUpperCase()}
+                  </p>
                 </div>
               </div>
 
@@ -520,11 +562,17 @@ function PizzaPayer() {
                     className="w-2.5 h-2.5 rounded-full bg-white animate-pulse"
                     style={{ boxShadow: "0 0 8px rgba(255,255,255,0.8)" }}
                   />
-                  <span className="text-sm text-white/80" style={{ fontFamily: "IBM Plex Sans, sans-serif" }}>
+                  <span
+                    className="text-sm text-white/80"
+                    style={{ fontFamily: "IBM Plex Sans, sans-serif" }}
+                  >
                     confirming on-chain...
                   </span>
                 </div>
-                <p className="text-xs text-white/45 text-center max-w-xs" style={{ fontFamily: "IBM Plex Sans, sans-serif" }}>
+                <p
+                  className="text-xs text-white/45 text-center max-w-xs"
+                  style={{ fontFamily: "IBM Plex Sans, sans-serif" }}
+                >
                   usually takes a few seconds
                 </p>
               </div>
@@ -565,7 +613,10 @@ function PizzaPayer() {
                   {formatAmount(orderData?.order?.amount || "0")}
                   <span className="text-lg text-white/60 ml-2">USDC</span>
                 </p>
-                <p className="text-white/45 text-sm mt-1" style={{ fontFamily: "IBM Plex Sans, sans-serif", fontStyle: "italic" }}>
+                <p
+                  className="text-white/45 text-sm mt-1"
+                  style={{ fontFamily: "IBM Plex Sans, sans-serif", fontStyle: "italic" }}
+                >
                   made with love at Tortorices 🍕
                 </p>
               </div>
@@ -605,7 +656,6 @@ function PizzaPayer() {
               <PizzaPoweredBy />
             </div>
           )}
-
         </div>
       </div>
     </div>

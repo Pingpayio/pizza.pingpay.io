@@ -27,11 +27,11 @@ export const Route = createFileRoute("/_layout/_authenticated/pizza/")({
 type OrderStatus = "IDLE" | "CREATING" | "WAITING" | "PAID" | "ERROR";
 
 const BG: Record<OrderStatus, string> = {
-  IDLE:     "linear-gradient(160deg, #c0392b 0%, #922b21 60%, #7b241c 100%)",
+  IDLE: "linear-gradient(160deg, #c0392b 0%, #922b21 60%, #7b241c 100%)",
   CREATING: "linear-gradient(160deg, #c0392b 0%, #922b21 60%, #7b241c 100%)",
-  WAITING:  "linear-gradient(160deg, #d35400 0%, #a04000 55%, #884000 100%)",
-  PAID:     "linear-gradient(160deg, #1e8449 0%, #196f3d 60%, #145a32 100%)",
-  ERROR:    "linear-gradient(160deg, #922b21 0%, #7b241c 55%, #641e16 100%)",
+  WAITING: "linear-gradient(160deg, #d35400 0%, #a04000 55%, #884000 100%)",
+  PAID: "linear-gradient(160deg, #1e8449 0%, #196f3d 60%, #145a32 100%)",
+  ERROR: "linear-gradient(160deg, #922b21 0%, #7b241c 55%, #641e16 100%)",
 };
 
 function PizzaPOS() {
@@ -109,11 +109,11 @@ function PizzaPOS() {
       <PizzaBackground />
       <BillyBadge />
 
-      <div className="relative z-10 flex flex-col items-center h-full overflow-y-auto overscroll-contain pb-safe px-5"
+      <div
+        className="relative z-10 flex flex-col items-center h-full overflow-y-auto overscroll-contain pb-safe px-5"
         style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
       >
         <div className="flex flex-col items-center w-full max-w-md min-h-full justify-center gap-8 py-6">
-
           {(orderStatus === "IDLE" || orderStatus === "CREATING") && (
             <>
               <div className="flex flex-col items-center gap-2 text-center">
@@ -132,7 +132,10 @@ function PizzaPOS() {
                 </h1>
               </div>
 
-              <div className="pizza-card w-full p-6 flex flex-col gap-5" style={{ background: "#fffde7" }}>
+              <div
+                className="pizza-card w-full p-6 flex flex-col gap-5"
+                style={{ background: "#fffde7" }}
+              >
                 <div className="flex flex-col gap-2">
                   <label htmlFor="order-name" className="pizza-label text-black/45">
                     order name
@@ -207,7 +210,10 @@ function PizzaPOS() {
                 </button>
 
                 {createOrder.error && (
-                  <p className="text-red-700 text-xs text-center" style={{ fontFamily: "IBM Plex Sans, sans-serif" }}>
+                  <p
+                    className="text-red-700 text-xs text-center"
+                    style={{ fontFamily: "IBM Plex Sans, sans-serif" }}
+                  >
                     {createOrder.error.message || "Failed to create order"}
                   </p>
                 )}
@@ -247,7 +253,10 @@ function PizzaPOS() {
                     className="w-2 h-2 rounded-full bg-white animate-waiting-dot"
                     style={{ boxShadow: "0 0 6px rgba(255,255,255,0.8)" }}
                   />
-                  <span className="text-sm text-white/70" style={{ fontFamily: "IBM Plex Sans, sans-serif" }}>
+                  <span
+                    className="text-sm text-white/70"
+                    style={{ fontFamily: "IBM Plex Sans, sans-serif" }}
+                  >
                     waiting for payment...
                   </span>
                 </div>
@@ -334,7 +343,6 @@ function PizzaPOS() {
               <PizzaPoweredBy />
             </div>
           )}
-
         </div>
       </div>
     </div>

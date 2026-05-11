@@ -152,12 +152,13 @@ export default createPlugin.withPlugins<PluginsClient>()({
         .handler(async ({ input, context }) => {
           const orderId = generatePizzaOrderId();
           const hostUrl =
-            services.hostUrl || new URL(
+            services.hostUrl ||
+            new URL(
               context.reqHeaders?.get("x-forwarded-host")
                 ? `${context.reqHeaders.get("x-forwarded-proto") || "http"}://${context.reqHeaders.get("x-forwarded-host")}`
                 : context.reqHeaders?.get("host")
                   ? `${context.reqHeaders.get("x-forwarded-proto") || "http"}://${context.reqHeaders.get("host")}`
-                  : "http://localhost:3000"
+                  : "http://localhost:3000",
             ).origin;
 
           let pingpayResult: Awaited<
@@ -575,7 +576,10 @@ export default createPlugin.withPlugins<PluginsClient>()({
                   .set({ status: "PAID", paidAt: new Date() })
                   .where(eq(pizzaOrders.id, input.orderId));
               } catch (error) {
-                console.error("[API] DB update failed in getPizzaOrderStatus (session COMPLETED):", error);
+                console.error(
+                  "[API] DB update failed in getPizzaOrderStatus (session COMPLETED):",
+                  error,
+                );
               }
               return { status: "PAID", updatedAt: new Date().toISOString() };
             }
@@ -591,7 +595,10 @@ export default createPlugin.withPlugins<PluginsClient>()({
                       .set({ status: "PAID", paidAt: new Date() })
                       .where(eq(pizzaOrders.id, input.orderId));
                   } catch (error) {
-                    console.error("[API] DB update failed in getPizzaOrderStatus (pingpay SUCCESS):", error);
+                    console.error(
+                      "[API] DB update failed in getPizzaOrderStatus (pingpay SUCCESS):",
+                      error,
+                    );
                   }
                   return { status: "PAID", updatedAt: new Date().toISOString() };
                 }

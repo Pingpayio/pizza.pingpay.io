@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { BillyBadge, PizzaBackground, PizzaPoweredBy, isBillysBirthday } from "@/components";
+import { BillyBadge, isBillysBirthday, PizzaBackground, PizzaPoweredBy } from "@/components";
 
 export const Route = createFileRoute("/_layout/pizza/billy")({
   head: () => ({
@@ -33,7 +33,9 @@ function Candle() {
       >
         🔥
       </span>
-      <span className="text-3xl" style={{ lineHeight: 1 }}>🕯️</span>
+      <span className="text-3xl" style={{ lineHeight: 1 }}>
+        🕯️
+      </span>
     </button>
   );
 }
@@ -67,7 +69,6 @@ function BillyPage() {
         style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
       >
         <div className="flex flex-col items-center w-full max-w-md min-h-full justify-center gap-8 py-10">
-
           {birthday ? (
             <>
               <div className="flex flex-col items-center gap-4 text-center">
@@ -79,10 +80,7 @@ function BillyPage() {
                 </span>
 
                 <div className="flex flex-col gap-1">
-                  <p
-                    className="pizza-label"
-                    style={{ color: "#fbbf24", letterSpacing: "0.2em" }}
-                  >
+                  <p className="pizza-label" style={{ color: "#fbbf24", letterSpacing: "0.2em" }}>
                     today is the day
                   </p>
                   <h1
@@ -127,16 +125,17 @@ function BillyPage() {
                       </div>
                     ))}
                   </div>
-                  <p className="text-white/30 text-xs" style={{ fontFamily: "IBM Plex Sans, sans-serif" }}>
+                  <p
+                    className="text-white/30 text-xs"
+                    style={{ fontFamily: "IBM Plex Sans, sans-serif" }}
+                  >
                     {5 - candlesBlown} remaining
                   </p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-3 text-center animate-fade-in">
                   <span className="text-5xl">🍕</span>
-                  <p
-                    className="text-white/80 text-lg font-medium pizza-display"
-                  >
+                  <p className="text-white/80 text-lg font-medium pizza-display">
                     pizza's on Billy tonight
                   </p>
                   <p
@@ -150,7 +149,10 @@ function BillyPage() {
 
               <div
                 className="pizza-card w-full p-5 flex flex-col items-center gap-3 text-center"
-                style={{ background: "rgba(255,255,255,0.06)", border: "1.5px solid rgba(255,255,255,0.12)" }}
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1.5px solid rgba(255,255,255,0.12)",
+                }}
               >
                 <p className="pizza-label" style={{ color: "#fbbf24" }}>
                   home of pizza boy billy
@@ -159,10 +161,8 @@ function BillyPage() {
                   className="text-white/70 text-sm leading-relaxed"
                   style={{ fontFamily: "IBM Plex Sans, sans-serif" }}
                 >
-                  Tortorices on Grand Ave —{" "}
-                  <br className="hidden sm:block" />
-                  where the pizza's made with love
-                  and the man never misses a birthday.
+                  Tortorices on Grand Ave — <br className="hidden sm:block" />
+                  where the pizza's made with love and the man never misses a birthday.
                 </p>
                 <span className="text-2xl">🎉</span>
               </div>
