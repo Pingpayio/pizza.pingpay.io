@@ -25,8 +25,8 @@ export const Route = createFileRoute("/_layout/pizza/$orderId")({
     const title = name ? `${name} | Pizza Pay` : "Pizza Pay";
     const description =
       name && amount
-        ? `Pay ${amount} USDC for ${name} at Tortorices on Grand Ave. Pick your token and chain, scan, and settle in seconds. Powered by PingPay.`
-        : "Pay for pizza with crypto at Tortorices on Grand Ave. Scan, pick your token and chain, and settle in USDC. Powered by PingPay.";
+        ? `Pizza Boy Billy rings up ${name} at Tortorices on Grand Ave. Pay ${amount} USDC for Chicago pizza — pick any token or chain, scan, and settle via PingPay.`
+        : "Pizza Boy Billy rings up your slice at Tortorices on Grand Ave. Pay for Chicago pizza with crypto — pick any token or chain, scan, and settle in USDC via PingPay.";
     const rootMatch = matches[0] as
       | { loaderData?: { assetsUrl?: string; runtimeConfig?: { hostUrl?: string } } }
       | undefined;

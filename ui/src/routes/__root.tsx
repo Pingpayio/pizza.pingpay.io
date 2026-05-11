@@ -49,7 +49,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       : "";
     const title = "Pizza Pay";
     const description =
-      "Pay for pizza with crypto at Tortorices on Grand Ave. Scan, pick your token and chain, and settle in USDC. Powered by PingPay.";
+      "Pizza Boy Billy rings up your slice at Tortorices on Grand Ave. Pay for Chicago pizza with crypto — pick any token or chain, scan, and settle in USDC via PingPay.";
     const siteName = "Pizza Pay — Powered by PingPay";
     const ogImage = `${assetsUrl}/metadata.jpg`;
 
