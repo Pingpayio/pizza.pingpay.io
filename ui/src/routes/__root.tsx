@@ -12,7 +12,7 @@ import { getSocialImageMeta } from "everything-dev/ui/metadata";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import type { RouterContext } from "@/app";
-import { getBaseStyles, getRuntimeBasePath } from "@/app";
+import { getBaseStyles } from "@/app";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 
 export const Route = createRootRouteWithContext<RouterContext>()({
@@ -43,14 +43,13 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   head: ({ loaderData }) => {
     const assetsUrl = loaderData?.assetsUrl || "";
     const runtimeConfig = loaderData?.runtimeConfig;
-    const runtimeBasePath = getRuntimeBasePath(runtimeConfig);
+    const runtimeBasePath = runtimeConfig?.runtime?.runtimeBasePath ?? "/";
     const siteUrl = runtimeConfig?.hostUrl
       ? `${runtimeConfig.hostUrl}${runtimeBasePath === "/" ? "" : runtimeBasePath}`
       : "";
-    const title = "Pizza Pay";
+    const title = "Pizza Pay — Powered by PingPay";
     const description =
-      "Pizza Boy Billy rings up your slice at Tortorices on Grand Ave. Pay for Chicago pizza with crypto — pick any token or chain, scan, and settle in USDC via PingPay.";
-    const siteName = "Pizza Pay — Powered by PingPay";
+            "Pizza Boy Billy rings up your slice at Tortorices on Grand Ave. Pay for Chicago pizza with crypto — pick any token or chain, scan, and settle in USDC via PingPay.";
     const ogImage = `${assetsUrl}/metadata.jpg`;
 
     const structuredData = {
@@ -72,7 +71,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         { name: "description", content: description },
         { name: "theme-color", content: "#ffffff" },
         { name: "color-scheme", content: "light dark" },
-        { name: "application-name", content: siteName },
+        { name: "application-name", content: title },
         { name: "mobile-web-app-capable", content: "yes" },
         {
           name: "apple-mobile-web-app-status-bar-style",
@@ -84,9 +83,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
           imageUrl: ogImage,
           title,
           description,
-          siteName,
+          siteName:title,
           siteUrl,
-          alt: "Pizza Pay",
+          alt: "app preview",
         }),
       ],
       links: [
