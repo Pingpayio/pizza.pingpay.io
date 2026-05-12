@@ -89,7 +89,7 @@
     "every-plugin": "^2.5.8",
     "everything-dev": "^1.12.2",
     "tailwindcss": "^4.1.17",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "vitest": "^4.0.17",
     "zephyr-rsbuild-plugin": "^1.0.1"
   }
