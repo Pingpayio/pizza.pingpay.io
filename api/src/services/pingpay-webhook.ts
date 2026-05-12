@@ -2,7 +2,14 @@ import * as crypto from "node:crypto";
 import { z } from "every-plugin/zod";
 
 const PingWebhookPayloadSchema = z.object({
-  type: z.enum(["payment.success", "payment.failed", "checkout.session.completed"]),
+  type: z.enum([
+    "payment.pending",
+    "payment.success",
+    "payment.failed",
+    "payment.abandoned",
+    "checkout.session.completed",
+    "checkout.session.expired",
+  ]),
   sessionId: z.string().optional(),
   metadata: z
     .object({

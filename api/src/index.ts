@@ -508,7 +508,7 @@ export default createPlugin.withPlugins<PluginsClient>()({
                 let event;
                 try {
                   const raw = JSON.parse(line.slice(6));
-                  event = raw.result || raw;
+                  event = raw.json || raw;
                 } catch {
                   continue;
                 }
@@ -681,6 +681,21 @@ export default createPlugin.withPlugins<PluginsClient>()({
         });
 
         switch (eventType) {
+          case "payment.pending": {
+            if (order.status === "CREATED") {
+              try {
+                await services.db
+                  .update(pizzaOrders)
+                  .set({ status: "PENDING" })
+                  .where(eq(pizzaOrders.id, order.id));
+                console.log("[PingPay Webhook] Updated order to PENDING", { orderId: order.id });
+              } catch (error) {
+                console.error("[PingPay Webhook] DB update to PENDING failed:", error);
+              }
+            }
+            break;
+          }
+
           case "payment.success":
           case "checkout.session.completed": {
             if (order.status === "PAID") {
@@ -700,7 +715,8 @@ export default createPlugin.withPlugins<PluginsClient>()({
             break;
           }
 
-          case "payment.failed": {
+          case "payment.failed":
+          case "payment.abandoned": {
             try {
               await services.db
                 .update(pizzaOrders)
@@ -709,6 +725,21 @@ export default createPlugin.withPlugins<PluginsClient>()({
               console.log("[PingPay Webhook] Updated order to FAILED", { orderId: order.id });
             } catch (error) {
               console.error("[PingPay Webhook] DB update to FAILED failed:", error);
+            }
+            break;
+          }
+
+          case "checkout.session.expired": {
+            if (order.status !== "PAID") {
+              try {
+                await services.db
+                  .update(pizzaOrders)
+                  .set({ status: "EXPIRED" })
+                  .where(eq(pizzaOrders.id, order.id));
+                console.log("[PingPay Webhook] Updated order to EXPIRED", { orderId: order.id });
+              } catch (error) {
+                console.error("[PingPay Webhook] DB update to EXPIRED failed:", error);
+              }
             }
             break;
           }

@@ -71,14 +71,14 @@
     "ui": {
       "name": "ui",
       "development": "local:ui",
-      "production": "https://elliot-braem-3519-ui-pizza-pingpay-io-pingpayio-c1ca21cb0-ze.zephyrcloud.app",
-      "integrity": "sha384-Ugdk4/QvIQPpxVKR8enHMGPsYdXVTC631B+Uu91YxcI0xDG/XwKZCzBmgeMXnU2w",
-      "ssr": "https://elliot-braem-3520-ui-pizza-pingpay-io-pingpayio-103db3da3-ze.zephyrcloud.app"
+      "production": "https://elliot-braem-3655-ui-pizza-pingpay-io-pingpayio-90b917382-ze.zephyrcloud.app",
+      "integrity": "sha384-9UY92nTQU5BMDQl2etiraoDBKIXtMeDARsgdRQizEmfgd91HwPl58Nw6XhoK4Kab",
+      "ssr": "https://elliot-braem-3656-ui-pizza-pingpay-io-pingpayio-3a1965741-ze.zephyrcloud.app"
     },
     "api": {
       "name": "api",
       "development": "local:api",
-      "production": "https://elliot-braem-3521-api-pizza-pingpay-io-pingpayio-94bcb4976-ze.zephyrcloud.app",
+      "production": "https://elliot-braem-3657-api-pizza-pingpay-io-pingpayio-bd24509d1-ze.zephyrcloud.app",
       "integrity": "sha384-H8DmAUPCoEXcmrJTRuteANVzCK75LZSgvW6752bS4YgTfTFp6cefqBk4PUdextxL",
       "secrets": [
         "API_DATABASE_URL",

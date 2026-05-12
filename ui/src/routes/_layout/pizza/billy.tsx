@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BillyBadge, isBillysBirthday, PizzaBackground, PizzaPoweredBy } from "@/components";
 
 export const Route = createFileRoute("/_layout/pizza/billy")({
@@ -44,6 +44,8 @@ function BillyPage() {
   const birthday = isBillysBirthday();
   const [candlesBlown, setCandlesBlown] = useState(0);
   const [showMessage, setShowMessage] = useState(false);
+  const badgeRef = useRef<HTMLDivElement>(null);
+  const [badgeHeight, setBadgeHeight] = useState(0);
 
   useEffect(() => {
     if (candlesBlown >= 5) {
@@ -51,6 +53,16 @@ function BillyPage() {
       return () => clearTimeout(t);
     }
   }, [candlesBlown]);
+
+  useEffect(() => {
+    if (!badgeRef.current) return;
+    const observer = new ResizeObserver(() => {
+      setBadgeHeight(badgeRef.current?.offsetHeight ?? 0);
+    });
+    observer.observe(badgeRef.current);
+    setBadgeHeight(badgeRef.current.offsetHeight);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div
@@ -62,18 +74,20 @@ function BillyPage() {
       }}
     >
       <PizzaBackground />
-      <BillyBadge />
+      <div ref={badgeRef}>
+        <BillyBadge />
+      </div>
 
       <div
-        className="relative z-10 flex flex-col items-center h-full overflow-y-auto overscroll-contain pb-safe px-5"
+        className="relative z-10 flex-1 min-h-0 flex flex-col items-center overflow-y-auto overscroll-contain pb-safe px-5"
         style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
       >
-        <div className="flex flex-col items-center w-full max-w-md min-h-full justify-center gap-8 py-10">
+        <div className="flex flex-col items-center w-full max-w-md gap-8" style={{ paddingTop: badgeHeight > 0 ? `${badgeHeight + 32}px` : "5rem", paddingBottom: "2.5rem" }}>
           {birthday ? (
             <>
               <div className="flex flex-col items-center gap-4 text-center">
                 <span
-                  className="text-7xl"
+                  className="text-5xl sm:text-7xl"
                   style={{ filter: "drop-shadow(0 6px 16px rgba(251,191,36,0.6))" }}
                 >
                   🎂
@@ -136,13 +150,13 @@ function BillyPage() {
                 <div className="flex flex-col items-center gap-3 text-center animate-fade-in">
                   <span className="text-5xl">🍕</span>
                   <p className="text-white/80 text-lg font-medium pizza-display">
-                    pizza's on Billy tonight
+                    Often imitated, never duplicated
                   </p>
                   <p
                     className="text-white/45 text-sm"
                     style={{ fontFamily: "IBM Plex Sans, sans-serif" }}
                   >
-                    Tortorices on Grand Ave
+                    try the caramelized crust
                   </p>
                 </div>
               )}
@@ -171,7 +185,7 @@ function BillyPage() {
             <>
               <div className="flex flex-col items-center gap-4 text-center">
                 <span
-                  className="text-7xl"
+                  className="text-5xl sm:text-7xl"
                   style={{ filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }}
                 >
                   🍕
