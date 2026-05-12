@@ -47,10 +47,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     const siteUrl = runtimeConfig?.hostUrl
       ? `${runtimeConfig.hostUrl}${runtimeBasePath === "/" ? "" : runtimeBasePath}`
       : "";
-    const title = "Pizza Pay — Powered by PingPay";
-    const description =
-            "Pizza Boy Billy rings up your slice at Tortorices on Grand Ave. Pay for Chicago pizza with crypto — pick any token or chain, scan, and settle in USDC via PingPay.";
-    const ogImage = `${assetsUrl}/metadata.jpg`;
+    const title = runtimeConfig?.runtime?.title ?? runtimeConfig?.account ?? "";
+    const description = runtimeConfig?.runtime?.description ?? "";
+    const ogImage = `${assetsUrl}/metadata.png`;
 
     const structuredData = {
       "@context": "https://schema.org",
@@ -83,7 +82,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
           imageUrl: ogImage,
           title,
           description,
-          siteName:title,
+          siteName: title,
           siteUrl,
           alt: "app preview",
         }),
