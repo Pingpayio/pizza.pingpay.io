@@ -30,7 +30,7 @@
     "@effect/language-service": "^0.85.1",
     "@module-federation/node": "^2.7.40",
     "@proj-airi/unplugin-drizzle-orm-migrations": "^0.1.4",
-    "@rspack/cli": "^1.6.8",
+    "@rspack/cli": "^2.0.2",
     "@rspack/core": "^1.6.8",
     "@types/node": "^25.0.3",
     "@types/pg": "^8.11.6",
