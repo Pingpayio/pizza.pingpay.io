@@ -8,7 +8,7 @@
   "staging": {
     "domain": "staging.dev.everything.dev"
   },
-  "repository": "https://github.com/nearbuilders/everything-dev",
+  "repository": "https://github.com/Pingpayio/pizza.pingpay.io",
   "app": {
     "host": {
       "development": "local:host",
