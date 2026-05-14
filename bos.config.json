@@ -1,13 +1,9 @@
 {
   "extends": "bos://auth.everything.near/everything.dev",
-  "account": "work.efiz.near",
+  "account": "efiz.near",
   "domain": "pizza.pingpay.io",
   "title": "Pizza Pay — Powered by PingPay",
   "description": "Pizza Boy Billy rings up your slice at Tortorices on Grand Ave. Pay for Chicago pizza with crypto — pick any token or chain, scan, and settle in USDC via PingPay.",
-  "testnet": "dev.allthethings.testnet",
-  "staging": {
-    "domain": "staging.dev.everything.dev"
-  },
   "repository": "https://github.com/Pingpayio/pizza.pingpay.io",
   "app": {
     "host": {
