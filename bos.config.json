@@ -1,66 +1,24 @@
 {
   "extends": "bos://auth.everything.near/everything.dev",
-  "account": "efiz.near",
+  "account": "work.efiz.near",
   "domain": "pizza.pingpay.io",
   "title": "Pizza Pay — Powered by PingPay",
   "description": "Pizza Boy Billy rings up your slice at Tortorices on Grand Ave. Pay for Chicago pizza with crypto — pick any token or chain, scan, and settle in USDC via PingPay.",
   "repository": "https://github.com/Pingpayio/pizza.pingpay.io",
   "app": {
-    "host": {
-      "development": "local:host",
-      "production": "https://elliot-braem-3498-host-everything-dev-nearbuilder-71d5f7f4d-ze.zephyrcloud.app",
-      "integrity": "sha384-Tsu6qanLw+Pn81PyT0VmuOM6bcae5ki20tZ09x1AUPMygsYj7QwoV2eGG299Zj+T"
-    },
     "ui": {
       "name": "ui",
-      "development": "local:ui",
-      "production": "https://elliot-braem-3655-ui-pizza-pingpay-io-pingpayio-90b917382-ze.zephyrcloud.app",
-      "integrity": "sha384-9UY92nTQU5BMDQl2etiraoDBKIXtMeDARsgdRQizEmfgd91HwPl58Nw6XhoK4Kab",
-      "ssr": "https://elliot-braem-3656-ui-pizza-pingpay-io-pingpayio-3a1965741-ze.zephyrcloud.app"
+      "development": "local:ui"
     },
     "api": {
       "name": "api",
       "development": "local:api",
-      "production": "https://elliot-braem-3657-api-pizza-pingpay-io-pingpayio-bd24509d1-ze.zephyrcloud.app",
-      "integrity": "sha384-H8DmAUPCoEXcmrJTRuteANVzCK75LZSgvW6752bS4YgTfTFp6cefqBk4PUdextxL",
       "secrets": [
         "API_DATABASE_URL",
         "PINGPAY_API_URL",
         "PINGPAY_API_KEY",
         "PINGPAY_WEBHOOK_SECRET"
       ]
-    },
-    "auth": {
-      "name": "everything-dev_auth-plugin",
-      "development": "local:plugins/auth",
-      "production": "https://elliot-braem-3503-everything-dev-auth-plugin-bett-7fee0d475-ze.zephyrcloud.app",
-      "integrity": "sha384-2/XoU0888rz8jb9s20IgzCP8buf3buTECG1fSAyzTLDwFMLNNKeAQ3KGEKbRlwh2",
-      "secrets": [
-        "AUTH_DATABASE_URL",
-        "BETTER_AUTH_SECRET",
-        "CORS_ORIGIN"
-      ],
-      "sidebar": [
-        {
-          "icon": "Building2",
-          "label": "organizations",
-          "to": "/organizations"
-        }
-      ]
-    }
-  },
-  "plugins": {
-    "apps": {
-      "extends": "bos://dev.everything.near/apps.everything.dev",
-      "development": "local:plugins/apps"
-    },
-    "projects": {
-      "extends": "bos://dev.everything.near/projects.everything.dev",
-      "development": "local:plugins/projects"
-    },
-    "settings": {
-      "extends": "bos://dev.everything.near/settings.everything.dev",
-      "development": "local:plugins/settings"
     }
   },
   "shared": {
