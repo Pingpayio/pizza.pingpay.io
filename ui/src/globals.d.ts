@@ -17,3 +17,8 @@ declare module "virtual:drizzle-migrations.sql" {
   const migrations: Migration[];
   export default migrations;
 }
+
+declare module "*.svg" {
+  const src: string;
+  export default src;
+}

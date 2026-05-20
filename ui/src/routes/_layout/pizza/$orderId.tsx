@@ -2,9 +2,23 @@ import { consumeEventIterator } from "@orpc/client";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { getSocialImageMeta } from "everything-dev/ui/metadata";
-import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BillyBadge, PizzaBackground, PizzaPoweredBy } from "@/components";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useApiClient } from "@/lib/api";
+import {
+  getChainDisplayName,
+  getChainImageUrl,
+  getChainShortName,
+  getTokenImageUrl,
+} from "@/lib/pingpay-assets";
 
 export const Route = createFileRoute("/_layout/pizza/$orderId")({
   loader: async ({ context, params }) => {
@@ -62,6 +76,148 @@ interface TokenOption {
   decimals?: number;
   priceUsd?: string;
   contractAddress?: string;
+}
+
+function pickString(v: unknown): string | undefined {
+  if (typeof v === "string" && v.trim()) return v.trim();
+  return undefined;
+}
+
+function normalizePingPayToken(raw: unknown): TokenOption | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const chainRaw = pickString(o.chain ?? o.network ?? o.networkId ?? o.chainId);
+  const symbol = pickString(o.symbol ?? o.ticker ?? o.currency);
+  if (!chainRaw || !symbol) return null;
+  const chain = chainRaw.toLowerCase();
+  const name = pickString(o.name ?? o.title);
+  const nestedAsset =
+    typeof o.asset === "object" && o.asset !== null ? (o.asset as Record<string, unknown>) : null;
+  const iconUrl = pickString(
+    o.iconUrl ??
+      o.imageUrl ??
+      o.logoUrl ??
+      (typeof o.icon === "string" ? o.icon : undefined) ??
+      nestedAsset?.iconUrl ??
+      nestedAsset?.imageUrl ??
+      nestedAsset?.logoUrl ??
+      (typeof nestedAsset?.icon === "string" ? nestedAsset.icon : undefined),
+  );
+  const decimals = typeof o.decimals === "number" ? o.decimals : undefined;
+  const priceUsd = pickString(o.priceUsd);
+  const contractAddress = pickString(o.contractAddress ?? o.address);
+  return { chain, symbol, name, iconUrl, decimals, priceUsd, contractAddress };
+}
+
+function tokenDisplayName(t: TokenOption) {
+  if (t.name && t.name !== t.symbol && t.name.toLowerCase() !== t.symbol.toLowerCase()) {
+    return t.name;
+  }
+  return undefined;
+}
+
+function TokenGlyph({ iconUrl, symbol }: { iconUrl?: string; symbol: string }) {
+  const [failed, setFailed] = useState(false);
+  const letter = (symbol?.[0] ?? "?").toUpperCase();
+  const src = getTokenImageUrl(symbol, iconUrl);
+  if (src && !failed) {
+    return (
+      <img
+        src={src}
+        alt=""
+        width={36}
+        height={36}
+        className="size-9 shrink-0 rounded-full border border-black/10 bg-white object-cover"
+        loading="lazy"
+        decoding="async"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <span
+      className="flex size-9 shrink-0 items-center justify-center rounded-full border border-black/15 bg-[#f0e8c0] text-sm font-semibold text-black/70 pizza-display"
+      aria-hidden
+    >
+      {letter}
+    </span>
+  );
+}
+
+function PlaceholderGlyph() {
+  return (
+    <span
+      className="flex size-9 shrink-0 items-center justify-center rounded-full border border-dashed border-black/25 bg-white"
+      aria-hidden
+    >
+      <svg width="20" height="20" viewBox="0 0 20 20" className="text-black/20" aria-hidden>
+        <title>Placeholder</title>
+        <circle
+          cx="10"
+          cy="10"
+          r="7"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeDasharray="3 3"
+        />
+      </svg>
+    </span>
+  );
+}
+
+function ChainGlyph({ chain }: { chain: string }) {
+  const [failed, setFailed] = useState(false);
+  const letter = (getChainShortName(chain)?.[0] ?? chain?.[0] ?? "?").toUpperCase();
+  const src = getChainImageUrl(chain);
+  if (src && !failed) {
+    return (
+      <img
+        src={src}
+        alt=""
+        width={36}
+        height={36}
+        className="size-9 shrink-0 rounded-full border border-black/10 bg-white object-cover"
+        loading="lazy"
+        decoding="async"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <span
+      className="flex size-9 shrink-0 items-center justify-center rounded-full border border-black/15 bg-[#f0e8c0] text-sm font-semibold text-black/70 pizza-display"
+      aria-hidden
+    >
+      {letter}
+    </span>
+  );
+}
+
+function PaymentFieldTriggerContent({
+  glyph,
+  microLabel,
+  primaryText,
+  placeholder,
+}: {
+  glyph: ReactNode;
+  microLabel: string;
+  primaryText: string | undefined;
+  placeholder: string;
+}) {
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-3">
+      {glyph}
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
+        <span className="text-[11px] font-medium uppercase tracking-wide text-black/45 pizza-label">
+          {microLabel}
+        </span>
+        <span className="truncate text-base font-semibold leading-tight text-black pizza-display">
+          {primaryText ?? placeholder}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 const BG: Partial<Record<PageStatus, string>> = {
@@ -196,16 +352,76 @@ function PizzaPayer() {
     }
   }, [isLoading, orderData, startSSE]);
 
-  useEffect(() => {
-    if (orderData?.config?.tokens) {
-      const tokens = orderData.config.tokens as TokenOption[];
-      const baseUsdc = tokens.find((t) => t.chain?.toLowerCase() === "base" && t.symbol === "USDC");
-      if (baseUsdc) {
-        setSelectedChain("base");
-        setSelectedSymbol("USDC");
-      }
+  const normalizedTokens = useMemo(() => {
+    const raw = orderData?.config?.tokens;
+    if (!Array.isArray(raw)) return [];
+    const seen = new Set<string>();
+    const out: TokenOption[] = [];
+    for (const item of raw) {
+      const t = normalizePingPayToken(item);
+      if (!t) continue;
+      const k = `${t.chain}:${t.symbol}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(t);
     }
-  }, [orderData]);
+    return out;
+  }, [orderData?.config?.tokens]);
+
+  const symbolGroups = useMemo(() => {
+    const byUpper = new Map<string, TokenOption[]>();
+    for (const t of normalizedTokens) {
+      const k = t.symbol.toUpperCase();
+      if (!byUpper.has(k)) byUpper.set(k, []);
+      byUpper.get(k)!.push(t);
+    }
+    const groups: { symbol: string; representative: TokenOption }[] = [];
+    for (const [, list] of byUpper) {
+      const rep = list.find((x) => x.iconUrl) ?? list[0];
+      if (!rep) continue;
+      groups.push({ symbol: rep.symbol, representative: rep });
+    }
+    groups.sort((a, b) => a.symbol.localeCompare(b.symbol));
+    return groups;
+  }, [normalizedTokens]);
+
+  const chainsForSymbol = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of normalizedTokens) {
+      if (t.symbol.toUpperCase() !== selectedSymbol.toUpperCase()) continue;
+      set.add(t.chain);
+    }
+    return Array.from(set).sort((a, b) =>
+      getChainDisplayName(a).localeCompare(getChainDisplayName(b)),
+    );
+  }, [normalizedTokens, selectedSymbol]);
+
+  const selectedSymbolRep = useMemo(() => {
+    return symbolGroups.find((g) => g.symbol.toUpperCase() === selectedSymbol.toUpperCase())
+      ?.representative;
+  }, [symbolGroups, selectedSymbol]);
+
+  useEffect(() => {
+    if (normalizedTokens.length === 0 || chainsForSymbol.length === 0) return;
+    if (chainsForSymbol.some((c) => c === selectedChain)) return;
+    setSelectedChain(chainsForSymbol[0]);
+  }, [normalizedTokens.length, chainsForSymbol, selectedChain]);
+
+  useEffect(() => {
+    if (normalizedTokens.length === 0) return;
+    const key = `${selectedChain}:${selectedSymbol}`;
+    if (normalizedTokens.some((t) => `${t.chain}:${t.symbol}` === key)) return;
+
+    const baseUsdc = normalizedTokens.find((t) => t.chain === "base" && t.symbol === "USDC");
+    if (baseUsdc) {
+      setSelectedChain(baseUsdc.chain);
+      setSelectedSymbol(baseUsdc.symbol);
+      return;
+    }
+    const first = normalizedTokens[0];
+    setSelectedChain(first.chain);
+    setSelectedSymbol(first.symbol);
+  }, [normalizedTokens, selectedChain, selectedSymbol]);
 
   useEffect(() => {
     return () => {
@@ -214,13 +430,10 @@ function PizzaPayer() {
     };
   }, []);
 
-  const tokens = (orderData?.config?.tokens || []) as TokenOption[];
-  const groupedTokens = tokens.reduce<Record<string, TokenOption[]>>((acc, t) => {
-    const chain = (t.chain || "other").toLowerCase();
-    if (!acc[chain]) acc[chain] = [];
-    acc[chain].push(t);
-    return acc;
-  }, {});
+  const selectedToken = useMemo(() => {
+    const v = `${selectedChain}:${selectedSymbol}`;
+    return normalizedTokens.find((t) => `${t.chain}:${t.symbol}` === v);
+  }, [normalizedTokens, selectedChain, selectedSymbol]);
 
   const preparePayment = useMutation({
     onMutate: () => {
@@ -300,7 +513,7 @@ function PizzaPayer() {
 
       <div
         className="relative z-10 flex flex-col items-center h-full overflow-y-auto overscroll-contain pb-safe px-5"
-        style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+        style={{ WebkitOverflowScrolling: "touch" } as CSSProperties}
       >
         <div className="flex flex-col items-center w-full max-w-md min-h-full justify-center gap-8 py-6">
           {(pageStatus === "ORDER" || pageStatus === "QUOTING") && (
@@ -335,37 +548,157 @@ function PizzaPayer() {
                 className="pizza-card w-full p-6 flex flex-col gap-5"
                 style={{ background: "#fffde7" }}
               >
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="token-select" className="pizza-label text-black/45">
-                    pay with
-                  </label>
-                  <select
-                    id="token-select"
-                    value={`${selectedChain}:${selectedSymbol}`}
-                    onChange={(e) => {
-                      const [chain, symbol] = e.target.value.split(":");
-                      setSelectedChain(chain);
-                      setSelectedSymbol(symbol);
-                    }}
-                    className="pizza-select w-full px-4 py-3 bg-white text-black"
+                <p className="pizza-label text-[11px] text-black/40">payment</p>
+                {normalizedTokens.length === 0 ? (
+                  <p
+                    className="rounded-xl border border-black/10 bg-white/80 px-4 py-3 text-sm text-black/55"
+                    style={{ fontFamily: "IBM Plex Sans, sans-serif" }}
                   >
-                    {Object.entries(groupedTokens).map(([chain, chainTokens]) => (
-                      <optgroup key={chain} label={chain.toUpperCase()}>
-                        {chainTokens.map((t) => (
-                          <option key={`${chain}:${t.symbol}`} value={`${chain}:${t.symbol}`}>
-                            {t.symbol}
-                            {t.name ? ` — ${t.name}` : ""}
-                          </option>
+                    No payment options available for this order.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <Select
+                      value={selectedSymbol}
+                      onValueChange={(sym) => {
+                        setSelectedSymbol(sym);
+                      }}
+                    >
+                      <SelectTrigger
+                        id="pay-token"
+                        size="default"
+                        aria-label={
+                          selectedSymbolRep
+                            ? `Pay with ${selectedSymbolRep.symbol}`
+                            : "Select token"
+                        }
+                        className="h-auto min-h-[60px] w-full rounded-xl border border-[rgba(200,100,80,0.38)] bg-white px-3 py-2.5 text-left text-black shadow-none focus:ring-2 focus:ring-[#d35400]/35 focus:ring-offset-0 data-[size=default]:h-auto dark:border-[rgba(200,100,80,0.38)] dark:bg-white [&_svg]:text-black/45"
+                      >
+                        <span className="sr-only">
+                          <SelectValue placeholder="Select Token" />
+                        </span>
+                        <PaymentFieldTriggerContent
+                          glyph={
+                            selectedSymbolRep ? (
+                              <TokenGlyph
+                                iconUrl={selectedSymbolRep.iconUrl}
+                                symbol={selectedSymbolRep.symbol}
+                              />
+                            ) : (
+                              <PlaceholderGlyph />
+                            )
+                          }
+                          microLabel="Pay with this token"
+                          primaryText={selectedSymbolRep?.symbol}
+                          placeholder="Select Token"
+                        />
+                      </SelectTrigger>
+                      <SelectContent
+                        position="popper"
+                        sideOffset={6}
+                        className="z-[110] max-h-[min(70vh,22rem)] border border-black/12 bg-[#fffef8] text-black shadow-xl dark:bg-[#fffef8] dark:text-black"
+                      >
+                        {symbolGroups.map((g) => {
+                          const subtitle = tokenDisplayName(g.representative);
+                          return (
+                            <SelectItem
+                              key={g.symbol}
+                              value={g.symbol}
+                              textValue={`${g.symbol} ${subtitle ?? ""}`}
+                              className="cursor-pointer rounded-lg py-2 pr-8 pl-2 text-black focus:bg-[#f4ecd0] focus:text-black data-[highlighted]:bg-[#f4ecd0] data-[state=checked]:bg-[#f0e4c0]"
+                            >
+                              <span className="flex items-center gap-3">
+                                <TokenGlyph iconUrl={g.representative.iconUrl} symbol={g.symbol} />
+                                <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
+                                  <span className="truncate text-base font-semibold leading-tight pizza-display">
+                                    {g.symbol}
+                                  </span>
+                                  {subtitle ? (
+                                    <span
+                                      className="truncate text-xs leading-snug text-black/50"
+                                      style={{ fontFamily: "IBM Plex Sans, sans-serif" }}
+                                    >
+                                      {subtitle}
+                                    </span>
+                                  ) : null}
+                                </span>
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={selectedChain}
+                      onValueChange={setSelectedChain}
+                      disabled={chainsForSymbol.length === 0}
+                    >
+                      <SelectTrigger
+                        id="pay-network"
+                        size="default"
+                        aria-label={
+                          selectedChain
+                            ? `On network ${getChainDisplayName(selectedChain)}`
+                            : "Select network"
+                        }
+                        className="h-auto min-h-[60px] w-full rounded-xl border border-[rgba(200,100,80,0.38)] bg-white px-3 py-2.5 text-left text-black shadow-none focus:ring-2 focus:ring-[#d35400]/35 focus:ring-offset-0 data-[size=default]:h-auto disabled:cursor-not-allowed disabled:opacity-55 dark:border-[rgba(200,100,80,0.38)] dark:bg-white [&_svg]:text-black/45"
+                      >
+                        <span className="sr-only">
+                          <SelectValue placeholder="Select Network" />
+                        </span>
+                        <PaymentFieldTriggerContent
+                          glyph={
+                            chainsForSymbol.length === 0 || !selectedChain ? (
+                              <PlaceholderGlyph />
+                            ) : (
+                              <ChainGlyph chain={selectedChain} />
+                            )
+                          }
+                          microLabel="On this network"
+                          primaryText={selectedChain ? getChainShortName(selectedChain) : undefined}
+                          placeholder="Select Network"
+                        />
+                      </SelectTrigger>
+                      <SelectContent
+                        position="popper"
+                        sideOffset={6}
+                        className="z-[110] max-h-[min(70vh,22rem)] border border-black/12 bg-[#fffef8] text-black shadow-xl dark:bg-[#fffef8] dark:text-black"
+                      >
+                        {chainsForSymbol.map((chain) => (
+                          <SelectItem
+                            key={chain}
+                            value={chain}
+                            textValue={getChainDisplayName(chain)}
+                            className="cursor-pointer rounded-lg py-2 pr-8 pl-2 text-black focus:bg-[#f4ecd0] focus:text-black data-[highlighted]:bg-[#f4ecd0] data-[state=checked]:bg-[#f0e4c0]"
+                          >
+                            <span className="flex items-center gap-3">
+                              <ChainGlyph chain={chain} />
+                              <span className="flex min-w-0 flex-col gap-0.5 text-left">
+                                <span className="truncate text-base font-semibold leading-tight pizza-display">
+                                  {getChainShortName(chain)}
+                                </span>
+                                <span className="truncate text-xs text-black/50">
+                                  {getChainDisplayName(chain)}
+                                </span>
+                              </span>
+                            </span>
+                          </SelectItem>
                         ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                </div>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 <button
                   type="button"
                   onClick={() => preparePayment.mutate()}
-                  disabled={preparePayment.isPending}
+                  disabled={
+                    preparePayment.isPending ||
+                    normalizedTokens.length === 0 ||
+                    chainsForSymbol.length === 0 ||
+                    !selectedToken
+                  }
                   className="pizza-btn pizza-btn-primary w-full py-4 text-white"
                   style={{ background: "#d35400" }}
                 >
@@ -419,14 +752,14 @@ function PizzaPayer() {
                           color: copiedAmount ? "white" : "rgba(0,0,0,0.45)",
                           touchAction: "manipulation",
                           WebkitTapHighlightColor: "transparent",
-                        } as React.CSSProperties
+                        } as CSSProperties
                       }
                     >
                       {copiedAmount ? <CheckIcon /> : <ClipboardIcon />}
                     </button>
                   </div>
                   <p className="pizza-label text-black/40 mt-0.5">
-                    on {selectedChain.toUpperCase()} network
+                    on {getChainDisplayName(selectedChain)} network
                   </p>
                 </div>
 
@@ -465,7 +798,7 @@ function PizzaPayer() {
                           background: "#f0e8c0",
                           userSelect: "all",
                           WebkitUserSelect: "all",
-                        } as React.CSSProperties
+                        } as CSSProperties
                       }
                     >
                       {depositAddress}
@@ -483,7 +816,7 @@ function PizzaPayer() {
                           color: "white",
                           touchAction: "manipulation",
                           WebkitTapHighlightColor: "transparent",
-                        } as React.CSSProperties
+                        } as CSSProperties
                       }
                     >
                       {copied ? <CheckIcon /> : <ClipboardIcon />}
@@ -544,14 +877,14 @@ function PizzaPayer() {
                           color: copiedAmount ? "white" : "rgba(0,0,0,0.45)",
                           touchAction: "manipulation",
                           WebkitTapHighlightColor: "transparent",
-                        } as React.CSSProperties
+                        } as CSSProperties
                       }
                     >
                       {copiedAmount ? <CheckIcon /> : <ClipboardIcon />}
                     </button>
                   </div>
                   <p className="pizza-label text-black/40 mt-0.5">
-                    on {selectedChain.toUpperCase()}
+                    on {getChainDisplayName(selectedChain)}
                   </p>
                 </div>
               </div>
