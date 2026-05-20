@@ -292,7 +292,13 @@ export default createPlugin.withPlugins<PluginsClient>()({
             sessionId: order.checkoutSessionId,
             payerAsset: {
               amount: order.amount,
-              asset: { chain: input.payerAsset.chain, symbol: input.payerAsset.symbol },
+              asset: {
+                chain: input.payerAsset.chain,
+                symbol: input.payerAsset.symbol,
+                ...(input.payerAsset.contractAddress
+                  ? { contractAddress: input.payerAsset.contractAddress }
+                  : {}),
+              },
             },
           });
         } catch (error) {
@@ -354,7 +360,13 @@ export default createPlugin.withPlugins<PluginsClient>()({
             sessionId: order.checkoutSessionId,
             payerAsset: {
               amount: order.amount,
-              asset: { chain: input.payerAsset.chain, symbol: input.payerAsset.symbol },
+              asset: {
+                chain: input.payerAsset.chain,
+                symbol: input.payerAsset.symbol,
+                ...(input.payerAsset.contractAddress
+                  ? { contractAddress: input.payerAsset.contractAddress }
+                  : {}),
+              },
             },
             payer: { address: "PLACEHOLDER" },
             idempotencyKey,

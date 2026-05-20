@@ -82,7 +82,13 @@ function BillyPage() {
         className="relative z-10 flex-1 min-h-0 flex flex-col items-center overflow-y-auto overscroll-contain pb-safe px-5"
         style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
       >
-        <div className="flex flex-col items-center w-full max-w-md gap-8" style={{ paddingTop: badgeHeight > 0 ? `${badgeHeight + 32}px` : "5rem", paddingBottom: "2.5rem" }}>
+        <div
+          className="flex flex-col items-center w-full max-w-md gap-8"
+          style={{
+            paddingTop: badgeHeight > 0 ? `${badgeHeight + 32}px` : "5rem",
+            paddingBottom: "2.5rem",
+          }}
+        >
           {birthday ? (
             <>
               <div className="flex flex-col items-center gap-4 text-center">

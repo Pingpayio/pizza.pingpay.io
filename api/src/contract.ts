@@ -101,6 +101,7 @@ export const contract = oc.router({
         payerAsset: z.object({
           chain: z.string(),
           symbol: z.string(),
+          contractAddress: z.string().optional(),
         }),
       }),
     )
@@ -120,6 +121,7 @@ export const contract = oc.router({
         payerAsset: z.object({
           chain: z.string(),
           symbol: z.string(),
+          contractAddress: z.string().optional(),
         }),
       }),
     )

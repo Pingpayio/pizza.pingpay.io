@@ -154,7 +154,10 @@ function createPingPayService(config: PingPayConfig) {
 
   async function getQuote(input: {
     sessionId: string;
-    payerAsset: { amount: string; asset: { chain: string; symbol: string } };
+    payerAsset: {
+      amount: string;
+      asset: { chain: string; symbol: string; contractAddress?: string };
+    };
   }): Promise<QuoteResponse> {
     const response = await pingpayFetch("/payments/quote", {
       method: "POST",
@@ -165,7 +168,10 @@ function createPingPayService(config: PingPayConfig) {
 
   async function preparePayment(input: {
     sessionId: string;
-    payerAsset: { amount: string; asset: { chain: string; symbol: string } };
+    payerAsset: {
+      amount: string;
+      asset: { chain: string; symbol: string; contractAddress?: string };
+    };
     payer: { address: string };
     idempotencyKey: string;
     paymentMethod: string;

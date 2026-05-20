@@ -116,6 +116,24 @@ function tokenDisplayName(t: TokenOption) {
   return undefined;
 }
 
+const SYMBOL_DISPLAY_MAP: Record<string, string> = {
+  wnear: "NEAR",
+  wNEAR: "NEAR",
+  WNEAR: "NEAR",
+};
+
+const SYMBOL_API_MAP: Record<string, string> = {
+  NEAR: "wnear",
+};
+
+function normalizeDisplaySymbol(symbol: string): string {
+  return SYMBOL_DISPLAY_MAP[symbol] ?? symbol;
+}
+
+function toApiSymbol(symbol: string): string {
+  return SYMBOL_API_MAP[symbol] ?? symbol;
+}
+
 function TokenGlyph({ iconUrl, symbol }: { iconUrl?: string; symbol: string }) {
   const [failed, setFailed] = useState(false);
   const letter = (symbol?.[0] ?? "?").toUpperCase();
@@ -279,8 +297,10 @@ function PizzaPayer() {
   const { orderId } = Route.useParams();
   const loaderData = Route.useLoaderData();
   const [pageStatus, setPageStatus] = useState<PageStatus>("LOADING");
-  const [selectedChain, setSelectedChain] = useState("base");
   const [selectedSymbol, setSelectedSymbol] = useState("USDC");
+  const [chainPreferences, setChainPreferences] = useState<Record<string, string>>({
+    USDC: "base",
+  });
   const [depositAddress, setDepositAddress] = useState("");
   const [amountToDepositFormatted, setAmountToDepositFormatted] = useState("");
   const [feeDisplay, setFeeDisplay] = useState("");
@@ -292,6 +312,8 @@ function PizzaPayer() {
   const sseRetryRef = useRef(0);
   const mountedRef = useRef(true);
   const isPaidRef = useRef(false);
+  const hasInitializedRef = useRef(false);
+  const selectedContractAddressRef = useRef<string | undefined>(undefined);
 
   const { data: orderData, isLoading } = useQuery({
     queryKey: ["pizza-order", orderId],
@@ -360,7 +382,7 @@ function PizzaPayer() {
     for (const item of raw) {
       const t = normalizePingPayToken(item);
       if (!t) continue;
-      const k = `${t.chain}:${t.symbol}`;
+      const k = t.contractAddress ? `${t.chain}:${t.contractAddress}` : `${t.chain}:${t.symbol}`;
       if (seen.has(k)) continue;
       seen.add(k);
       out.push(t);
@@ -369,26 +391,28 @@ function PizzaPayer() {
   }, [orderData?.config?.tokens]);
 
   const symbolGroups = useMemo(() => {
-    const byUpper = new Map<string, TokenOption[]>();
+    const byDisplayUpper = new Map<string, TokenOption[]>();
     for (const t of normalizedTokens) {
-      const k = t.symbol.toUpperCase();
-      if (!byUpper.has(k)) byUpper.set(k, []);
-      byUpper.get(k)!.push(t);
+      const display = normalizeDisplaySymbol(t.symbol);
+      const k = display.toUpperCase();
+      if (!byDisplayUpper.has(k)) byDisplayUpper.set(k, []);
+      byDisplayUpper.get(k)!.push(t);
     }
-    const groups: { symbol: string; representative: TokenOption }[] = [];
-    for (const [, list] of byUpper) {
+    const groups: { displaySymbol: string; representative: TokenOption }[] = [];
+    for (const [, list] of byDisplayUpper) {
       const rep = list.find((x) => x.iconUrl) ?? list[0];
       if (!rep) continue;
-      groups.push({ symbol: rep.symbol, representative: rep });
+      groups.push({ displaySymbol: normalizeDisplaySymbol(rep.symbol), representative: rep });
     }
-    groups.sort((a, b) => a.symbol.localeCompare(b.symbol));
+    groups.sort((a, b) => a.displaySymbol.localeCompare(b.displaySymbol));
     return groups;
   }, [normalizedTokens]);
 
   const chainsForSymbol = useMemo(() => {
+    const displayUpper = selectedSymbol.toUpperCase();
     const set = new Set<string>();
     for (const t of normalizedTokens) {
-      if (t.symbol.toUpperCase() !== selectedSymbol.toUpperCase()) continue;
+      if (normalizeDisplaySymbol(t.symbol).toUpperCase() !== displayUpper) continue;
       set.add(t.chain);
     }
     return Array.from(set).sort((a, b) =>
@@ -396,32 +420,30 @@ function PizzaPayer() {
     );
   }, [normalizedTokens, selectedSymbol]);
 
+  const effectiveChain = useMemo(() => {
+    const preferred = chainPreferences[selectedSymbol];
+    if (preferred && chainsForSymbol.includes(preferred)) return preferred;
+    return chainsForSymbol[0] ?? "base";
+  }, [chainPreferences, selectedSymbol, chainsForSymbol]);
+
   const selectedSymbolRep = useMemo(() => {
-    return symbolGroups.find((g) => g.symbol.toUpperCase() === selectedSymbol.toUpperCase())
+    return symbolGroups.find((g) => g.displaySymbol.toUpperCase() === selectedSymbol.toUpperCase())
       ?.representative;
   }, [symbolGroups, selectedSymbol]);
 
   useEffect(() => {
-    if (normalizedTokens.length === 0 || chainsForSymbol.length === 0) return;
-    if (chainsForSymbol.some((c) => c === selectedChain)) return;
-    setSelectedChain(chainsForSymbol[0]);
-  }, [normalizedTokens.length, chainsForSymbol, selectedChain]);
-
-  useEffect(() => {
-    if (normalizedTokens.length === 0) return;
-    const key = `${selectedChain}:${selectedSymbol}`;
-    if (normalizedTokens.some((t) => `${t.chain}:${t.symbol}` === key)) return;
-
+    if (hasInitializedRef.current || normalizedTokens.length === 0) return;
+    hasInitializedRef.current = true;
     const baseUsdc = normalizedTokens.find((t) => t.chain === "base" && t.symbol === "USDC");
     if (baseUsdc) {
-      setSelectedChain(baseUsdc.chain);
-      setSelectedSymbol(baseUsdc.symbol);
+      setSelectedSymbol(normalizeDisplaySymbol(baseUsdc.symbol));
+      setChainPreferences({ [normalizeDisplaySymbol(baseUsdc.symbol)]: baseUsdc.chain });
       return;
     }
     const first = normalizedTokens[0];
-    setSelectedChain(first.chain);
-    setSelectedSymbol(first.symbol);
-  }, [normalizedTokens, selectedChain, selectedSymbol]);
+    setSelectedSymbol(normalizeDisplaySymbol(first.symbol));
+    setChainPreferences({ [normalizeDisplaySymbol(first.symbol)]: first.chain });
+  }, [normalizedTokens]);
 
   useEffect(() => {
     return () => {
@@ -431,9 +453,26 @@ function PizzaPayer() {
   }, []);
 
   const selectedToken = useMemo(() => {
-    const v = `${selectedChain}:${selectedSymbol}`;
-    return normalizedTokens.find((t) => `${t.chain}:${t.symbol}` === v);
-  }, [normalizedTokens, selectedChain, selectedSymbol]);
+    const candidates = normalizedTokens.filter(
+      (t) =>
+        normalizeDisplaySymbol(t.symbol).toUpperCase() === selectedSymbol.toUpperCase() &&
+        t.chain === effectiveChain,
+    );
+    if (candidates.length === 0) return undefined;
+    if (candidates.length === 1) return candidates[0];
+    const preferredContract = selectedContractAddressRef.current;
+    if (preferredContract) {
+      const byContract = candidates.find((t) => t.contractAddress === preferredContract);
+      if (byContract) return byContract;
+    }
+    return candidates[0];
+  }, [normalizedTokens, effectiveChain, selectedSymbol]);
+
+  useEffect(() => {
+    if (selectedToken?.contractAddress) {
+      selectedContractAddressRef.current = selectedToken.contractAddress;
+    }
+  }, [selectedToken]);
 
   const preparePayment = useMutation({
     onMutate: () => {
@@ -442,7 +481,13 @@ function PizzaPayer() {
     mutationFn: () =>
       apiClient.preparePizzaPayment({
         orderId,
-        payerAsset: { chain: selectedChain, symbol: selectedSymbol },
+        payerAsset: {
+          chain: effectiveChain,
+          symbol: toApiSymbol(selectedSymbol),
+          ...(selectedToken?.contractAddress
+            ? { contractAddress: selectedToken.contractAddress }
+            : {}),
+        },
       }),
     onSuccess: (data) => {
       setDepositAddress(data.depositAddress);
@@ -569,7 +614,7 @@ function PizzaPayer() {
                         size="default"
                         aria-label={
                           selectedSymbolRep
-                            ? `Pay with ${selectedSymbolRep.symbol}`
+                            ? `Pay with ${normalizeDisplaySymbol(selectedSymbolRep.symbol)}`
                             : "Select token"
                         }
                         className="h-auto min-h-[60px] w-full rounded-xl border border-[rgba(200,100,80,0.38)] bg-white px-3 py-2.5 text-left text-black shadow-none focus:ring-2 focus:ring-[#d35400]/35 focus:ring-offset-0 data-[size=default]:h-auto dark:border-[rgba(200,100,80,0.38)] dark:bg-white [&_svg]:text-black/45"
@@ -582,14 +627,14 @@ function PizzaPayer() {
                             selectedSymbolRep ? (
                               <TokenGlyph
                                 iconUrl={selectedSymbolRep.iconUrl}
-                                symbol={selectedSymbolRep.symbol}
+                                symbol={selectedSymbol}
                               />
                             ) : (
                               <PlaceholderGlyph />
                             )
                           }
                           microLabel="Pay with this token"
-                          primaryText={selectedSymbolRep?.symbol}
+                          primaryText={selectedSymbol}
                           placeholder="Select Token"
                         />
                       </SelectTrigger>
@@ -602,16 +647,19 @@ function PizzaPayer() {
                           const subtitle = tokenDisplayName(g.representative);
                           return (
                             <SelectItem
-                              key={g.symbol}
-                              value={g.symbol}
-                              textValue={`${g.symbol} ${subtitle ?? ""}`}
+                              key={g.displaySymbol}
+                              value={g.displaySymbol}
+                              textValue={`${g.displaySymbol} ${subtitle ?? ""}`}
                               className="cursor-pointer rounded-lg py-2 pr-8 pl-2 text-black focus:bg-[#f4ecd0] focus:text-black data-[highlighted]:bg-[#f4ecd0] data-[state=checked]:bg-[#f0e4c0]"
                             >
                               <span className="flex items-center gap-3">
-                                <TokenGlyph iconUrl={g.representative.iconUrl} symbol={g.symbol} />
+                                <TokenGlyph
+                                  iconUrl={g.representative.iconUrl}
+                                  symbol={g.displaySymbol}
+                                />
                                 <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
                                   <span className="truncate text-base font-semibold leading-tight pizza-display">
-                                    {g.symbol}
+                                    {g.displaySymbol}
                                   </span>
                                   {subtitle ? (
                                     <span
@@ -630,16 +678,18 @@ function PizzaPayer() {
                     </Select>
 
                     <Select
-                      value={selectedChain}
-                      onValueChange={setSelectedChain}
+                      value={effectiveChain}
+                      onValueChange={(chain) => {
+                        setChainPreferences((prev) => ({ ...prev, [selectedSymbol]: chain }));
+                      }}
                       disabled={chainsForSymbol.length === 0}
                     >
                       <SelectTrigger
                         id="pay-network"
                         size="default"
                         aria-label={
-                          selectedChain
-                            ? `On network ${getChainDisplayName(selectedChain)}`
+                          effectiveChain
+                            ? `On network ${getChainDisplayName(effectiveChain)}`
                             : "Select network"
                         }
                         className="h-auto min-h-[60px] w-full rounded-xl border border-[rgba(200,100,80,0.38)] bg-white px-3 py-2.5 text-left text-black shadow-none focus:ring-2 focus:ring-[#d35400]/35 focus:ring-offset-0 data-[size=default]:h-auto disabled:cursor-not-allowed disabled:opacity-55 dark:border-[rgba(200,100,80,0.38)] dark:bg-white [&_svg]:text-black/45"
@@ -649,14 +699,16 @@ function PizzaPayer() {
                         </span>
                         <PaymentFieldTriggerContent
                           glyph={
-                            chainsForSymbol.length === 0 || !selectedChain ? (
+                            chainsForSymbol.length === 0 || !effectiveChain ? (
                               <PlaceholderGlyph />
                             ) : (
-                              <ChainGlyph chain={selectedChain} />
+                              <ChainGlyph chain={effectiveChain} />
                             )
                           }
                           microLabel="On this network"
-                          primaryText={selectedChain ? getChainShortName(selectedChain) : undefined}
+                          primaryText={
+                            effectiveChain ? getChainShortName(effectiveChain) : undefined
+                          }
                           placeholder="Select Network"
                         />
                       </SelectTrigger>
@@ -759,7 +811,7 @@ function PizzaPayer() {
                     </button>
                   </div>
                   <p className="pizza-label text-black/40 mt-0.5">
-                    on {getChainDisplayName(selectedChain)} network
+                    on {getChainDisplayName(effectiveChain)} network
                   </p>
                 </div>
 
@@ -884,7 +936,7 @@ function PizzaPayer() {
                     </button>
                   </div>
                   <p className="pizza-label text-black/40 mt-0.5">
-                    on {getChainDisplayName(selectedChain)}
+                    on {getChainDisplayName(effectiveChain)}
                   </p>
                 </div>
               </div>
