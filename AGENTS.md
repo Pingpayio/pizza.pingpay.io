@@ -27,13 +27,19 @@ skills:
     use: "every-plugin#plugin-testing"
   - when: "Development workflow for everything-dev projects using bos dev, bos start, and the Module Federation runtime. Use when starting dev servers, debugging hot reload, or understanding the service-descriptor architecture."
     use: "everything-dev#dev-workflow"
+  - when: "How bos.config.json extends chains work, deep merge semantics, resolved config lifecycle, env-specific parents, tenant runtime inheritance, or debugging config merge behavior."
+    use: "everything-dev#extends-config"
+  - when: "Scaffold a new project, extend an existing project from a parent runtime, sync upstream files, upgrade framework packages, or choose local override sections for ui/api/host/plugins."
+    use: "everything-dev#init-upgrade"
+  - when: "Build a super app with a shared host and shared API, set up fixed-core tenant mode, reason about extends-based runtime lineage, configure tenant UI overrides, or create custom tenant apps that extend a base runtime."
+    use: "everything-dev#super-app"
   - when: "Publish bos.config.json to the FastKV registry, sync from upstream, and upgrade workspace packages. Use when deploying, syncing, or managing runtime configuration across projects."
     use: "everything-dev#publish-sync"
 <!-- intent-skills:end -->
 
 # Agent Instructions
 
-This document provides operational guidance for AI agents working on a BOS project scaffolded via `bos init`.
+This document provides operational guidance for AI agents working in the parent `everything.dev` repository.
 
 ## Quick Reference
 
@@ -44,15 +50,10 @@ bun install
 bun run dev
 ```
 
-**Sync from Parent:**
+**Sync and Publish:**
 ```bash
-bos sync              # Pull updates from parent template
+bos sync              # Pull updates from published config/template state
 bos upgrade           # Check for new versions, update, then sync
-bos status            # Show project health (extends, versions, .env, last sync)
-```
-
-**Publish:**
-```bash
 bos publish           # Publish config to the FastKV registry
 bos publish --deploy  # Build/deploy all workspaces, then publish
 ```
@@ -66,11 +67,11 @@ bos info      # Show configuration
 
 ## Architecture
 
-This is a **Module Federation monorepo** with runtime-loaded configuration. The host is **remote** — it is not in this repository. You work on `/ui`, `/api`, and `/plugins` (auth, registry, projects, etc.).
+This is the parent **Module Federation monorepo** for `everything.dev`. The host is in this repository under `host/`. You may work across `/host`, `/ui`, `/api`, `/plugins`, and `/packages`.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Host (Remote)                        │
+│                    Host (Server)                        │
 │  - Hono.js + oRPC router                               │
 │  - Runtime config loader (bos.config.json)              │
 │  - Module Federation host                               │
@@ -78,18 +79,18 @@ This is a **Module Federation monorepo** with runtime-loaded configuration. The 
 └─────────────────────────────────────────────────────────┘
             ↓                ↓                ↓
 ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
-│    UI (Local)    │ │  Auth Plugin     │ │  API + Plugins   │
+│       UI         │ │  Auth Plugin     │ │  API + Plugins   │
 │  - React 19      │ │  - every-plugin  │ │  - every-plugin  │
 │  - TanStack      │ │  - Better-Auth   │ │  - oRPC contract │
 │  - Module Fed.   │ │  - NEAR SIWN     │ │  - Effect svc    │
 └──────────────────┘ └──────────────────┘ └──────────────────┘
 ```
 
-The host loads UI and API at runtime from URLs in `bos.config.json`. No rebuild is needed when URLs change.
+The host loads UI and API at runtime from URLs in `bos.config.json`. In production today, the host still boots one base `RuntimeConfig` snapshot at startup, but it can resolve tenant-specific UI overrides per request while keeping the server core fixed.
 
 ### Runtime Config
 
-All runtime configuration lives in `bos.config.json`. The UI reads `window.__RUNTIME_CONFIG__` to get account, gateway, API base URL, etc.
+All runtime configuration lives in `bos.config.json`. The UI reads `window.__RUNTIME_CONFIG__` to get account, gateway, API base URL, etc. The host uses the same config to wire Module Federation remotes, auth, plugins, and SSR.
 
 Use these helpers from `@/app`:
 - `getAppName()` — active runtime title (falls back to account)
@@ -97,6 +98,26 @@ Use these helpers from `@/app`:
 - `getRepository()` — repository URL from config
 - `getActiveRuntime()` — active runtime info (accountId, gatewayId, title)
 - `getRuntimeConfig()` — full client config
+
+Important: fixed-core tenant runtime composition now lives primarily in:
+- `host/src/services/tenant-runtime.ts`
+- `host/src/program.ts`
+- `host/src/services/federation.server.ts`
+
+Tenant model:
+- `extends` is the lineage edge between runtimes
+- `account` is the tenant namespace root for the active runtime
+- `domain` is the public ingress for that runtime
+- a runtime can extend another runtime and still become a new tenant root on its own domain
+
+Current fixed-core host rules:
+- the shared host still boots once from one base runtime snapshot
+- child runtime config must extend the active BOS runtime
+- supported request-scoped overrides are `ui`, existing `plugins.<id>.ui`, and existing `plugins.<id>.sidebar`
+- tenant SSR is gated by `TENANT_WHITELIST` and `ALLOW_UNTRUSTED_SSR`
+- nested label routing and account-relative tenant derivation are the intended architecture direction, but not the complete resolver behavior today
+
+For full per-request host/plugin/auth/api swapping, start from `plans/runtime-config-hot-swap.md`.
 
 ## Development Workflow
 
@@ -124,8 +145,10 @@ Use these helpers from `@/app`:
 ## Code Changes
 
 ### Making Changes
+- **Host Changes**: Edit `host/src/` when changing runtime resolution, auth wiring, SSR, proxying, or plugin mounting
 - **UI Changes**: Edit `ui/src/` files → hot reload automatically
 - **API Changes**: Edit `api/src/` files → hot reload automatically
+- **CLI/Scaffolding Changes**: Edit `packages/everything-dev/` when changing init/dev/publish flows or child-project scaffolding
 - **New Components**: Create in `ui/src/components/ui/`, export from `ui/src/components/index.ts`
 - **New Routes**: Create file in `ui/src/routes/`, TanStack Router auto-generates tree
 
@@ -147,7 +170,7 @@ Business logic is organized into independent plugins loaded via Module Federatio
 - **`plugins/auth/`** — Authentication and authorization (Better-Auth, NEAR SIWN, organizations, API keys)
 - **`plugins/registry/`** — FastKV app discovery, metadata publish/relay (no database)
 - **`plugins/projects/`** — Project and organization management
- - **`plugins/_template/`** — Scaffold for creating new plugins
+- **`plugins/_template/`** — Scaffold for creating new plugins
 
 Each plugin is self-contained with its own:
 - `contract.ts` — oRPC route definitions and Zod schemas
@@ -170,12 +193,25 @@ Plugin types resolve in two ways:
 
 If you hand-edit `bos.config.json`, run `bos types gen` or restart `bos dev` to regenerate.
 
+## Parent vs Child
+
+This repo is the parent platform, not a generated child project.
+
+- Prefer changing `host/` and `packages/everything-dev/` when the request is about runtime resolution, domain routing, config loading, CLI behavior, or scaffolding.
+- Prefer changing child project repos when the request is about project-specific content, shell navigation, or app-specific plugin/sidebar composition.
+- Do not assume the host is remote-only or out of tree; that is true for many child repos, not for this one.
+
 ## Changesets
 
 **When to add a changeset:**
 - Any user-facing change (features, fixes, deprecations)
 - Breaking changes
 - Skip for: docs-only changes, internal refactors, test-only changes
+
+**Release flow:**
+- Parent repo production releases run through `.github/workflows/packages-release.yml`, which creates or updates the `chore: version packages` PR when changesets are pending.
+- After that version PR is merged, `packages-release.yml` calls `.github/workflows/release.yml`, which runs `bun run deploy`, publishes `bos.config.json` to FastKV, and commits the updated deployment URLs.
+- Generated child repos use the same `CI` -> `Packages Release` -> `Release` pattern, but only version and deploy their local workspaces and runtime surfaces.
 
 **Create changeset:**
 ```bash
@@ -242,7 +278,7 @@ Module Federation shares React, TanStack Query, and TanStack Router as singleton
 
 ### Dependency Security
 
-- **Renovate** manages dependency updates (not Dependabot). Config: `.github/renovate.json`
+- **Renovate** manages dependency updates for this parent repo (not Dependabot). Config: `.github/renovate.json`. New generated child repos no longer scaffold that config by default.
 - **`--ignore-scripts`** — all CI workflows use `bun install --frozen-lockfile --ignore-scripts`. Lifecycle scripts (the TanStack attack vector) never execute during install.
 - **`dependency-review-action`** runs on every PR to flag known vulnerabilities.
 - **`bun audit`** runs in CI and fails on critical/high findings.

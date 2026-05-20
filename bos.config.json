@@ -8,10 +8,7 @@
   "app": {
     "ui": {
       "name": "ui",
-      "development": "local:ui",
-      "production": "https://elliot-braem-3885-ui-pizza-pingpay-io-pingpayio-8e1271ab0-ze.zephyrcloud.app",
-      "integrity": "sha384-bKyD+XiiVhG2sSTs9jiUdC//lRj4BOHAlVCBv3LSUgdeyVXq5EkYgVx+ZCT0fIth",
-      "ssr": "https://elliot-braem-3886-ui-pizza-pingpay-io-pingpayio-95ca8d183-ze.zephyrcloud.app"
+      "development": "local:ui"
     },
     "api": {
       "name": "api",
@@ -21,9 +18,7 @@
         "PINGPAY_API_URL",
         "PINGPAY_API_KEY",
         "PINGPAY_WEBHOOK_SECRET"
-      ],
-      "production": "https://elliot-braem-3887-api-pizza-pingpay-io-pingpayio-b3990a8f2-ze.zephyrcloud.app",
-      "integrity": "sha384-u2epi1tMvkfGaSG6ZxmXdi+uFbssOhrLNzbCYcHa4Qq6R+qa1xzy+tobx4GYvSEf"
+      ]
     }
   },
   "shared": {
@@ -57,7 +52,7 @@
         "shareScope": "default"
       },
       "better-near-auth": {
-        "version": "1.4.2",
+        "version": "1.5.0",
         "requiredVersion": "^1.4.2",
         "singleton": true,
         "strictVersion": false,

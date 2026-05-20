@@ -44,16 +44,31 @@ function getHostUrl(config?: Partial<ClientRuntimeConfig>) {
   return "";
 }
 
-export function createAuthClient(config?: Partial<ClientRuntimeConfig>) {
+function getCspNonce(config?: Partial<ClientRuntimeConfig>) {
+  const runtimeConfig = readRuntimeConfig(config);
+  if (runtimeConfig?.cspNonce) return runtimeConfig.cspNonce;
+  if (typeof document !== "undefined") {
+    return document.querySelector("script[nonce]")?.getAttribute("nonce") ?? undefined;
+  }
+  return undefined;
+}
+
+export function createAuthClient(config?: Partial<ClientRuntimeConfig>, headers?: HeadersInit) {
+  const nearAuthConfig = {
+    recipient: getAccountId(config),
+    networkId: getNetworkId(config),
+    cspNonce: getCspNonce(config),
+  };
+
   return createBetterAuthClient({
     baseURL: getHostUrl(config),
-    fetchOptions: { credentials: "include" },
+    fetchOptions: {
+      credentials: "include",
+      ...(headers ? { headers } : {}),
+    },
     plugins: [
       inferAdditionalFields<Auth>(),
-      siwnClient({
-        recipient: getAccountId(config),
-        networkId: getNetworkId(config),
-      }),
+      siwnClient(nearAuthConfig),
       adminClient(),
       anonymousClient(),
       phoneNumberClient(),
