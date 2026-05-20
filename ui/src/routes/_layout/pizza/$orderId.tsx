@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { getSocialImageMeta } from "everything-dev/ui/metadata";
 import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BillyBadge, PizzaBackground, PizzaPoweredBy } from "@/components";
+import { PizzaBackground, PizzaPoweredBy } from "@/components";
 import {
   Select,
   SelectContent,
@@ -554,7 +554,6 @@ function PizzaPayer() {
       style={{ background: BG[pageStatus] ?? BG_FALLBACK }}
     >
       <PizzaBackground />
-      <BillyBadge />
 
       <div
         className="relative z-10 flex flex-col items-center h-full overflow-y-auto overscroll-contain pb-safe px-5"

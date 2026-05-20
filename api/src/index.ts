@@ -4,12 +4,13 @@ import { Effect } from "every-plugin/effect";
 import { ORPCError } from "every-plugin/orpc";
 import { z } from "every-plugin/zod";
 import { contract } from "./contract";
+import type { DatabaseDriver } from "./db/index";
 import { loadMigrations } from "./db/load-migrations";
 import { migrate } from "./db/migrator";
 import { pizzaOrders } from "./db/schema";
 import type { PluginsClient } from "./plugins-client.gen";
 import { verifyAndParseWebhook } from "./services/pingpay-webhook";
-import { createPingPayService } from "./services/pizza";
+import { createPingPayService, type PaymentStatusResponse } from "./services/pizza";
 
 export interface AuthContext {
   userId: string;
@@ -58,7 +59,7 @@ export default createPlugin.withPlugins<PluginsClient>()({
 
   initialize: (config, plugins) =>
     Effect.promise(async () => {
-      let driver;
+      let driver: DatabaseDriver;
       try {
         const { createDatabaseDriver } = await import("./db/index");
         driver = await createDatabaseDriver(config.secrets.API_DATABASE_URL);
@@ -81,7 +82,7 @@ export default createPlugin.withPlugins<PluginsClient>()({
       console.log("[API] Auth client available:", Boolean(auth));
       console.log("[API] Plugins available:", Object.keys(restPlugins).join(", ") || "none");
 
-      let pizzaService;
+      let pizzaService: ReturnType<typeof createPingPayService>;
       try {
         pizzaService = createPingPayService({
           apiUrl: config.secrets.PINGPAY_API_URL,
@@ -200,7 +201,7 @@ export default createPlugin.withPlugins<PluginsClient>()({
         }),
 
       getPizzaOrder: builder.getPizzaOrder.handler(async ({ input, errors }) => {
-        let order;
+        let order: typeof pizzaOrders.$inferSelect | undefined;
         try {
           [order] = await services.db
             .select()
@@ -258,7 +259,7 @@ export default createPlugin.withPlugins<PluginsClient>()({
       }),
 
       quotePizzaPayment: builder.quotePizzaPayment.handler(async ({ input, errors }) => {
-        let order;
+        let order: typeof pizzaOrders.$inferSelect | undefined;
         try {
           [order] = await services.db
             .select()
@@ -316,7 +317,7 @@ export default createPlugin.withPlugins<PluginsClient>()({
       }),
 
       preparePizzaPayment: builder.preparePizzaPayment.handler(async ({ input, errors }) => {
-        let order;
+        let order: typeof pizzaOrders.$inferSelect | undefined;
         try {
           [order] = await services.db
             .select()
@@ -412,7 +413,7 @@ export default createPlugin.withPlugins<PluginsClient>()({
       }),
 
       notifyPizzaDeposit: builder.notifyPizzaDeposit.handler(async ({ input, errors }) => {
-        let order;
+        let order: typeof pizzaOrders.$inferSelect | undefined;
         try {
           [order] = await services.db
             .select()
@@ -440,7 +441,7 @@ export default createPlugin.withPlugins<PluginsClient>()({
           });
         }
 
-        let pingpayStatus;
+        let pingpayStatus: PaymentStatusResponse;
         try {
           pingpayStatus = await services.pizzaService.getPaymentStatus(order.depositAddress);
         } catch (error) {
@@ -470,7 +471,7 @@ export default createPlugin.withPlugins<PluginsClient>()({
       }),
 
       subscribePizzaOrder: builder.subscribePizzaOrder.handler(async function* ({ input, errors }) {
-        let order;
+        let order: typeof pizzaOrders.$inferSelect | undefined;
         try {
           [order] = await services.db
             .select()
@@ -517,7 +518,7 @@ export default createPlugin.withPlugins<PluginsClient>()({
 
             for (const line of lines) {
               if (line.startsWith("data: ")) {
-                let event;
+                let event: { status: string; updatedAt?: string };
                 try {
                   const raw = JSON.parse(line.slice(6));
                   event = raw.json || raw;
@@ -550,7 +551,7 @@ export default createPlugin.withPlugins<PluginsClient>()({
       }),
 
       getPizzaOrderStatus: builder.getPizzaOrderStatus.handler(async ({ input, errors }) => {
-        let order;
+        let order: typeof pizzaOrders.$inferSelect | undefined;
         try {
           [order] = await services.db
             .select()

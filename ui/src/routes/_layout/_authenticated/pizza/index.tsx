@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
-import { BillyBadge, PizzaBackground, PizzaPoweredBy } from "@/components";
+import { PizzaBackground, PizzaPoweredBy } from "@/components";
 import { useApiClient } from "@/lib/api";
 
 const SPECIALS = [
@@ -107,7 +107,6 @@ function PizzaPOS() {
       style={{ background: BG[orderStatus] }}
     >
       <PizzaBackground />
-      <BillyBadge />
 
       <div
         className="relative z-10 flex flex-col items-center h-full overflow-y-auto overscroll-contain pb-safe px-5"

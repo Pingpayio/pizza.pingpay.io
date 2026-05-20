@@ -83,7 +83,7 @@ interface PreparePaymentResponse {
   };
 }
 
-interface PaymentStatusResponse {
+export interface PaymentStatusResponse {
   status: string;
   updatedAt?: string;
 }

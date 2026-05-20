@@ -1,4 +1,4 @@
-export { BillyBadge, isBillysBirthday, PizzaBackground, PizzaPoweredBy } from "./pizza";
+export { isBillysBirthday, PizzaBackground, PizzaPoweredBy } from "./pizza";
 export { Badge } from "./ui/badge";
 export { Button } from "./ui/button";
 export {

@@ -1,5 +1,3 @@
-import { Link, useRouterState } from "@tanstack/react-router";
-
 const BG_EMOJIS = [
   { emoji: "🍕", top: 8, left: 5, rotate: -12, size: 4 },
   { emoji: "🧀", top: 75, left: 85, rotate: 18, size: 3.2 },
@@ -61,59 +59,5 @@ export function PizzaPoweredBy() {
 
 export function isBillysBirthday(): boolean {
   const now = new Date();
-  return now.getMonth() === 4 && now.getDate() === 11; // May 11
-}
-
-export function BillyBadge() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isBillyPage = pathname === "/pizza/billy";
-
-  return (
-    <div
-      className="sticky top-0 z-50 flex items-center justify-center py-2 px-4"
-      style={{
-        background: "#c0392b",
-        boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
-      }}
-    >
-      <Link
-        to="/pizza/billy"
-        className="flex items-center gap-0 select-none"
-        style={{
-          textDecoration: "none",
-          opacity: isBillyPage ? 0.7 : 1,
-          pointerEvents: isBillyPage ? "none" : "auto",
-        }}
-      >
-        <span
-          className="pizza-display"
-          style={{
-            fontFamily: "Fredoka, sans-serif",
-            fontWeight: 500,
-            fontSize: "0.95rem",
-            color: "white",
-            letterSpacing: "0.01em",
-            fontStyle: "italic",
-            paddingRight: "0.3em",
-          }}
-        >
-          Pizza Boy
-        </span>
-        <span
-          className="pizza-display"
-          style={{
-            fontFamily: "Fredoka, sans-serif",
-            fontWeight: 700,
-            fontSize: "1.15rem",
-            color: "#4ade80",
-            letterSpacing: "0.02em",
-            textShadow: "0 1px 3px rgba(0,0,0,0.4)",
-          }}
-        >
-          BILLY
-        </span>
-        {isBillysBirthday() && <span style={{ marginLeft: "0.4em", fontSize: "1rem" }}>🎂</span>}
-      </Link>
-    </div>
-  );
+  return now.getMonth() === 4 && now.getDate() === 11;
 }

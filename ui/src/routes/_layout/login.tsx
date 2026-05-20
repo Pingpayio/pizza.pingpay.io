@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Navigate, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { BillyBadge, isBillysBirthday, PizzaBackground } from "@/components";
+import { isBillysBirthday, PizzaBackground } from "@/components";
 import { sessionQueryKey, sessionQueryOptions, useAuthClient } from "@/lib/auth";
 
 function safeRedirectTo(path?: string) {
@@ -157,7 +157,6 @@ function LoginPage() {
       style={{ background: "linear-gradient(160deg, #c0392b 0%, #922b21 60%, #7b241c 100%)" }}
     >
       <PizzaBackground />
-      <BillyBadge />
 
       <div
         className="relative z-10 flex flex-col items-center h-full overflow-y-auto overscroll-contain pb-safe px-5"
