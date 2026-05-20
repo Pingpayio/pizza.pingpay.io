@@ -1,13 +1,9 @@
 {
   "account": "work.efiz.near",
-  "extends": "bos://auth.everything.near/everything.dev",
+  "extends": "bos://dev.everything.near/everything.dev",
   "domain": "pizza.pingpay.io",
   "title": "Pizza Pay — Powered by PingPay",
   "description": "Pizza Boy Billy rings up your slice at Tortorices on Grand Ave. Pay for Chicago pizza with crypto — pick any token or chain, scan, and settle in USDC via PingPay.",
-  "testnet": "dev.allthethings.testnet",
-  "staging": {
-    "domain": "staging.dev.everything.dev"
-  },
   "repository": "https://github.com/Pingpayio/pizza.pingpay.io",
   "shared": {
     "ui": {
@@ -64,11 +60,6 @@
     "plugins": {}
   },
   "app": {
-    "host": {
-      "development": "local:host",
-      "production": "https://elliot-braem-3601-host-everything-dev-nearbuilder-bf98aa005-ze.zephyrcloud.app",
-      "integrity": "sha384-Tsu6qanLw+Pn81PyT0VmuOM6bcae5ki20tZ09x1AUPMygsYj7QwoV2eGG299Zj+T"
-    },
     "ui": {
       "name": "ui",
       "development": "local:ui",
@@ -87,33 +78,6 @@
         "PINGPAY_API_KEY",
         "PINGPAY_WEBHOOK_SECRET"
       ]
-    },
-    "auth": {
-      "name": "everything-dev_auth-plugin",
-      "production": "https://elliot-braem-3936-everything-dev-auth-plugin-bett-6a6eb176c-ze.zephyrcloud.app",
-      "integrity": "sha384-I1rGrvlz7X1HOKvlhWgzG/kRrmlbZwM0TbWiAyCF3zcGk+FE1a3M5KbAUXvv65to",
-      "secrets": [
-        "AUTH_DATABASE_URL",
-        "BETTER_AUTH_SECRET",
-        "CORS_ORIGIN",
-        "GITHUB_CLIENT_ID",
-        "GITHUB_CLIENT_SECRET",
-        "PASSKEY_RP_ID",
-        "PASSKEY_RP_NAME",
-        "PASSKEY_ORIGIN",
-        "TWILIO_ACCOUNT_SID",
-        "TWILIO_AUTH_TOKEN",
-        "TWILIO_PHONE_NUMBER"
-      ],
-      "sidebar": [
-        {
-          "icon": "Building2",
-          "label": "organizations",
-          "to": "/organizations"
-        }
-      ],
-      "extends": "bos://auth.everything.near/everything.dev#app.auth",
-      "development": "local:plugins/auth"
     }
   }
 }
