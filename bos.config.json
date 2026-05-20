@@ -72,15 +72,15 @@
     "ui": {
       "name": "ui",
       "development": "local:ui",
-      "production": "https://elliot-braem-3933-ui-better-near-auth-elliotbraem-2ccc42670-ze.zephyrcloud.app",
-      "integrity": "sha384-NyP9AociWTYN/fuReUVwv+oAGjvmL8rYQqztEv8zOmG/bnR6VQG/hGAXCG38i2EB",
-      "ssr": "https://elliot-braem-3934-ui-better-near-auth-elliotbraem-dc8002b40-ze.zephyrcloud.app"
+      "production": "https://elliot-braem-3989-ui-pizza-pingpay-io-pingpayio-0a91c3e48-ze.zephyrcloud.app",
+      "integrity": "sha384-AtKiVH/EDd98eb24K1lVDK6ynw2PSUxfmnVi+ySxc+Hnrc9zqBnD8d8jFpO1Pcmo",
+      "ssr": "https://elliot-braem-3990-ui-pizza-pingpay-io-pingpayio-84dc03a7e-ze.zephyrcloud.app"
     },
     "api": {
       "name": "api",
       "development": "local:api",
-      "production": "https://elliot-braem-3935-api-better-near-auth-elliotbrae-d755444b8-ze.zephyrcloud.app",
-      "integrity": "sha384-4dDd3sadXZmCqYsQwtsy56+jVL1tszCROOnobT6WqQSwsaLsacSBUHeNJddYX8SH",
+      "production": "https://elliot-braem-3991-api-pizza-pingpay-io-pingpayio-3a66023af-ze.zephyrcloud.app",
+      "integrity": "sha384-BicebHqLcNXkgWGSmQXZhoriyYpeRSPycLrMDvRiDaj+bbsWUxOoz0g9BH2UYXVZ",
       "secrets": [
         "API_DATABASE_URL",
         "PINGPAY_API_URL",
