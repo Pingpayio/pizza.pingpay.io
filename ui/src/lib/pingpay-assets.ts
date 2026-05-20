@@ -1,7 +1,20 @@
 import { getAssetIcon } from "./checkout-assets";
-import { getChainDisplayName, getChainIcon, getChainShortName } from "./checkout-chains";
+import {
+  compareChainsByPopularity,
+  getChainDisplayName,
+  getChainIcon,
+  getChainShortName,
+} from "./checkout-chains";
+import { compareTokensByPriority } from "./checkout-token-sort";
 
-export { getAssetIcon, getChainDisplayName, getChainIcon, getChainShortName };
+export {
+  compareChainsByPopularity,
+  compareTokensByPriority,
+  getAssetIcon,
+  getChainDisplayName,
+  getChainIcon,
+  getChainShortName,
+};
 
 export function getTokenImageUrl(
   symbol: string,

@@ -82,6 +82,63 @@ export function getChainDisplayName(chain: string): string {
   return chainDisplayNames[chain] || chain;
 }
 
+export const CHAIN_POPULARITY_ORDER = [
+  "sol",
+  "near",
+  "eth",
+  "base",
+  "zec",
+  "btc",
+  "tron",
+  "xrp",
+  "pol",
+  "arb",
+  "bsc",
+  "op",
+  "avax",
+  "sui",
+  "ton",
+  "gnosis",
+  "stellar",
+  "doge",
+  "ltc",
+  "bch",
+  "cardano",
+  "aptos",
+  "aurora",
+  "starknet",
+  "hyperliquid",
+  "monad",
+  "bera",
+  "dash",
+  "xlayer",
+  "plasma",
+  "aleo",
+  "adi",
+  "scroll",
+] as const;
+
+const chainPopularityRank = new Map<string, number>(
+  CHAIN_POPULARITY_ORDER.map((id, index) => [id, index]),
+);
+
+export function normalizeChainId(chain: string): string {
+  const k = chain.toLowerCase();
+  if (k === "strk") return "starknet";
+  return k;
+}
+
+export function getChainPopularityRank(chain: string): number {
+  return chainPopularityRank.get(normalizeChainId(chain)) ?? Number.MAX_SAFE_INTEGER;
+}
+
+export function compareChainsByPopularity(a: string, b: string): number {
+  const ra = getChainPopularityRank(a);
+  const rb = getChainPopularityRank(b);
+  if (ra !== rb) return ra - rb;
+  return getChainDisplayName(a).localeCompare(getChainDisplayName(b));
+}
+
 /**
  * Chain short names mapping for compact display (e.g., in pills/badges)
  * Uses abbreviated names to avoid overflow

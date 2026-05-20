@@ -2,18 +2,19 @@ import { consumeEventIterator } from "@orpc/client";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { getSocialImageMeta } from "everything-dev/ui/metadata";
+import { ChevronDownIcon } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PizzaBackground, PizzaPoweredBy } from "@/components";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  PaymentNetworkPickerDialog,
+  PaymentTokenPickerDialog,
+} from "@/components/pizza/payment-picker-dialog";
+import { cn } from "@/lib/utils";
 import { useApiClient } from "@/lib/api";
 import {
+  compareChainsByPopularity,
+  compareTokensByPriority,
   getChainDisplayName,
   getChainImageUrl,
   getChainShortName,
@@ -109,13 +110,6 @@ function normalizePingPayToken(raw: unknown): TokenOption | null {
   return { chain, symbol, name, iconUrl, decimals, priceUsd, contractAddress };
 }
 
-function tokenDisplayName(t: TokenOption) {
-  if (t.name && t.name !== t.symbol && t.name.toLowerCase() !== t.symbol.toLowerCase()) {
-    return t.name;
-  }
-  return undefined;
-}
-
 const SYMBOL_DISPLAY_MAP: Record<string, string> = {
   wnear: "NEAR",
   wNEAR: "NEAR",
@@ -133,6 +127,31 @@ function normalizeDisplaySymbol(symbol: string): string {
 function toApiSymbol(symbol: string): string {
   return SYMBOL_API_MAP[symbol] ?? symbol;
 }
+
+function buildSymbolGroups(tokens: TokenOption[], chain: string) {
+  const byDisplayUpper = new Map<string, TokenOption[]>();
+  for (const t of tokens) {
+    const display = normalizeDisplaySymbol(t.symbol);
+    const k = display.toUpperCase();
+    if (!byDisplayUpper.has(k)) byDisplayUpper.set(k, []);
+    byDisplayUpper.get(k)!.push(t);
+  }
+  const groups: { displaySymbol: string; representative: TokenOption }[] = [];
+  for (const [, list] of byDisplayUpper) {
+    const rep = list.find((x) => x.iconUrl) ?? list[0];
+    if (!rep) continue;
+    groups.push({ displaySymbol: normalizeDisplaySymbol(rep.symbol), representative: rep });
+  }
+  groups.sort((a, b) =>
+    compareTokensByPriority(chain, a.displaySymbol, b.displaySymbol),
+  );
+  return groups;
+}
+
+const PAYMENT_FIELD_RADIUS = "rounded-xl";
+
+const PAYMENT_SELECT_TRIGGER_CLASS =
+  "h-auto min-h-[60px] w-full border border-[rgba(200,100,80,0.38)] bg-white px-3 py-2.5 text-left text-black shadow-none focus:ring-2 focus:ring-[#d35400]/35 focus:ring-offset-0 data-[size=default]:h-auto disabled:cursor-not-allowed disabled:opacity-55 dark:border-[rgba(200,100,80,0.38)] dark:bg-white [&_svg]:text-black/45";
 
 function TokenGlyph({ iconUrl, symbol }: { iconUrl?: string; symbol: string }) {
   const [failed, setFailed] = useState(false);
@@ -297,23 +316,24 @@ function PizzaPayer() {
   const { orderId } = Route.useParams();
   const loaderData = Route.useLoaderData();
   const [pageStatus, setPageStatus] = useState<PageStatus>("LOADING");
-  const [selectedSymbol, setSelectedSymbol] = useState("USDC");
-  const [chainPreferences, setChainPreferences] = useState<Record<string, string>>({
-    USDC: "base",
-  });
+  const [selectedChain, setSelectedChain] = useState("");
+  const [selectedSymbol, setSelectedSymbol] = useState("");
   const [depositAddress, setDepositAddress] = useState("");
   const [amountToDepositFormatted, setAmountToDepositFormatted] = useState("");
   const [feeDisplay, setFeeDisplay] = useState("");
   const [rateDisplay, setRateDisplay] = useState("");
   const [copied, setCopied] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
+  const [networkPickerOpen, setNetworkPickerOpen] = useState(false);
+  const [tokenPickerOpen, setTokenPickerOpen] = useState(false);
 
   const sseCancelRef = useRef<(() => Promise<void>) | null>(null);
   const sseRetryRef = useRef(0);
   const mountedRef = useRef(true);
   const isPaidRef = useRef(false);
-  const hasInitializedRef = useRef(false);
   const selectedContractAddressRef = useRef<string | undefined>(undefined);
+  const pickerAnchorRef = useRef<HTMLDivElement>(null);
+  const paymentCardRef = useRef<HTMLDivElement>(null);
 
   const { data: orderData, isLoading } = useQuery({
     queryKey: ["pizza-order", orderId],
@@ -390,60 +410,64 @@ function PizzaPayer() {
     return out;
   }, [orderData?.config?.tokens]);
 
-  const symbolGroups = useMemo(() => {
-    const byDisplayUpper = new Map<string, TokenOption[]>();
-    for (const t of normalizedTokens) {
-      const display = normalizeDisplaySymbol(t.symbol);
-      const k = display.toUpperCase();
-      if (!byDisplayUpper.has(k)) byDisplayUpper.set(k, []);
-      byDisplayUpper.get(k)!.push(t);
-    }
-    const groups: { displaySymbol: string; representative: TokenOption }[] = [];
-    for (const [, list] of byDisplayUpper) {
-      const rep = list.find((x) => x.iconUrl) ?? list[0];
-      if (!rep) continue;
-      groups.push({ displaySymbol: normalizeDisplaySymbol(rep.symbol), representative: rep });
-    }
-    groups.sort((a, b) => a.displaySymbol.localeCompare(b.displaySymbol));
-    return groups;
+  const allChains = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of normalizedTokens) set.add(t.chain);
+    return Array.from(set).sort(compareChainsByPopularity);
   }, [normalizedTokens]);
 
-  const chainsForSymbol = useMemo(() => {
-    const displayUpper = selectedSymbol.toUpperCase();
-    const set = new Set<string>();
-    for (const t of normalizedTokens) {
-      if (normalizeDisplaySymbol(t.symbol).toUpperCase() !== displayUpper) continue;
-      set.add(t.chain);
-    }
-    return Array.from(set).sort((a, b) =>
-      getChainDisplayName(a).localeCompare(getChainDisplayName(b)),
-    );
-  }, [normalizedTokens, selectedSymbol]);
+  const tokensForChain = useMemo(
+    () => normalizedTokens.filter((t) => t.chain === selectedChain),
+    [normalizedTokens, selectedChain],
+  );
 
-  const effectiveChain = useMemo(() => {
-    const preferred = chainPreferences[selectedSymbol];
-    if (preferred && chainsForSymbol.includes(preferred)) return preferred;
-    return chainsForSymbol[0] ?? "base";
-  }, [chainPreferences, selectedSymbol, chainsForSymbol]);
+  const symbolGroupsForPicker = useMemo(() => {
+    if (!selectedChain) {
+      return buildSymbolGroups(normalizedTokens, "");
+    }
+    return buildSymbolGroups(tokensForChain, selectedChain);
+  }, [normalizedTokens, selectedChain, tokensForChain]);
+
+  const chainsForPicker = useMemo(() => {
+    if (!selectedSymbol) return allChains;
+    const sym = selectedSymbol.toUpperCase();
+    return allChains.filter((chain) =>
+      normalizedTokens.some(
+        (t) =>
+          t.chain === chain && normalizeDisplaySymbol(t.symbol).toUpperCase() === sym,
+      ),
+    );
+  }, [allChains, selectedSymbol, normalizedTokens]);
 
   const selectedSymbolRep = useMemo(() => {
-    return symbolGroups.find((g) => g.displaySymbol.toUpperCase() === selectedSymbol.toUpperCase())
-      ?.representative;
-  }, [symbolGroups, selectedSymbol]);
+    if (!selectedSymbol) return undefined;
+    return symbolGroupsForPicker.find(
+      (g) => g.displaySymbol.toUpperCase() === selectedSymbol.toUpperCase(),
+    )?.representative;
+  }, [symbolGroupsForPicker, selectedSymbol]);
 
   useEffect(() => {
-    if (hasInitializedRef.current || normalizedTokens.length === 0) return;
-    hasInitializedRef.current = true;
-    const baseUsdc = normalizedTokens.find((t) => t.chain === "base" && t.symbol === "USDC");
-    if (baseUsdc) {
-      setSelectedSymbol(normalizeDisplaySymbol(baseUsdc.symbol));
-      setChainPreferences({ [normalizeDisplaySymbol(baseUsdc.symbol)]: baseUsdc.chain });
-      return;
+    if (!selectedChain || !selectedSymbol) return;
+
+    const sym = selectedSymbol.toUpperCase();
+    const onChain = normalizedTokens.some(
+      (t) =>
+        t.chain === selectedChain && normalizeDisplaySymbol(t.symbol).toUpperCase() === sym,
+    );
+    if (onChain) return;
+
+    const chainsWithSymbol = allChains.filter((chain) =>
+      normalizedTokens.some(
+        (t) =>
+          t.chain === chain && normalizeDisplaySymbol(t.symbol).toUpperCase() === sym,
+      ),
+    );
+    if (chainsWithSymbol.length > 1 && !chainsWithSymbol.includes(selectedChain)) {
+      setSelectedChain("");
+    } else {
+      setSelectedSymbol("");
     }
-    const first = normalizedTokens[0];
-    setSelectedSymbol(normalizeDisplaySymbol(first.symbol));
-    setChainPreferences({ [normalizeDisplaySymbol(first.symbol)]: first.chain });
-  }, [normalizedTokens]);
+  }, [selectedChain, selectedSymbol, normalizedTokens, allChains]);
 
   useEffect(() => {
     return () => {
@@ -453,10 +477,11 @@ function PizzaPayer() {
   }, []);
 
   const selectedToken = useMemo(() => {
+    if (!selectedChain || !selectedSymbol) return undefined;
     const candidates = normalizedTokens.filter(
       (t) =>
         normalizeDisplaySymbol(t.symbol).toUpperCase() === selectedSymbol.toUpperCase() &&
-        t.chain === effectiveChain,
+        t.chain === selectedChain,
     );
     if (candidates.length === 0) return undefined;
     if (candidates.length === 1) return candidates[0];
@@ -466,7 +491,7 @@ function PizzaPayer() {
       if (byContract) return byContract;
     }
     return candidates[0];
-  }, [normalizedTokens, effectiveChain, selectedSymbol]);
+  }, [normalizedTokens, selectedChain, selectedSymbol]);
 
   useEffect(() => {
     if (selectedToken?.contractAddress) {
@@ -482,7 +507,7 @@ function PizzaPayer() {
       apiClient.preparePizzaPayment({
         orderId,
         payerAsset: {
-          chain: effectiveChain,
+          chain: selectedChain,
           symbol: toApiSymbol(selectedSymbol),
           ...(selectedToken?.contractAddress
             ? { contractAddress: selectedToken.contractAddress }
@@ -576,168 +601,131 @@ function PizzaPayer() {
                 >
                   {orderData?.order?.name}
                 </h2>
-                <p
-                  className="text-white/50 text-sm"
-                  style={{ fontFamily: "IBM Plex Sans, sans-serif", fontStyle: "italic" }}
-                >
-                  the man wants to give you a pizza
-                </p>
-                <p className="text-4xl font-semibold text-white/90 mt-1 pizza-display">
-                  {formatAmount(orderData?.order?.amount || "0")}
-                  <span className="text-xl text-white/60 ml-2">USDC</span>
-                </p>
               </div>
 
               <div
-                className="pizza-card w-full p-6 flex flex-col gap-5"
-                style={{ background: "#fffde7" }}
+                ref={pickerAnchorRef}
+                className="flex w-full flex-col items-center gap-8"
               >
-                <p className="pizza-label text-[11px] text-black/40">payment</p>
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <p
+                    className="text-white/50 text-sm"
+                    style={{ fontFamily: "IBM Plex Sans, sans-serif", fontStyle: "italic" }}
+                  >
+                    the man wants to give you a pizza
+                  </p>
+                  <p className="text-4xl font-semibold text-white/90 mt-1 pizza-display">
+                    {formatAmount(orderData?.order?.amount || "0")}
+                    <span className="text-xl text-white/60 ml-2">USDC</span>
+                  </p>
+                </div>
+
+                <div
+                  ref={paymentCardRef}
+                  className="pizza-card w-full p-6 flex flex-col gap-5"
+                  style={{ background: "#fffde7" }}
+                >
+                <p className="pizza-display text-base font-semibold uppercase tracking-wide text-black/45">
+                  payment
+                </p>
                 {normalizedTokens.length === 0 ? (
                   <p
-                    className="rounded-xl border border-black/10 bg-white/80 px-4 py-3 text-sm text-black/55"
+                    className={`${PAYMENT_FIELD_RADIUS} border border-black/10 bg-white/80 px-4 py-3 text-sm text-black/55`}
                     style={{ fontFamily: "IBM Plex Sans, sans-serif" }}
                   >
                     No payment options available for this order.
                   </p>
                 ) : (
                   <div className="flex flex-col gap-3">
-                    <Select
-                      value={selectedSymbol}
-                      onValueChange={(sym) => {
-                        setSelectedSymbol(sym);
-                      }}
+                    <button
+                      type="button"
+                      id="pay-network"
+                      disabled={chainsForPicker.length === 0}
+                      aria-haspopup="dialog"
+                      aria-expanded={networkPickerOpen}
+                      aria-label={
+                        selectedChain
+                          ? `On network ${getChainDisplayName(selectedChain)}`
+                          : "Select network"
+                      }
+                      onClick={() => setNetworkPickerOpen(true)}
+                      className={cn(
+                        PAYMENT_FIELD_RADIUS,
+                        PAYMENT_SELECT_TRIGGER_CLASS,
+                        "flex items-center justify-between gap-2",
+                      )}
                     >
-                      <SelectTrigger
-                        id="pay-token"
-                        size="default"
-                        aria-label={
-                          selectedSymbolRep
-                            ? `Pay with ${normalizeDisplaySymbol(selectedSymbolRep.symbol)}`
-                            : "Select token"
+                      <PaymentFieldTriggerContent
+                        glyph={
+                          chainsForPicker.length === 0 || !selectedChain ? (
+                            <PlaceholderGlyph />
+                          ) : (
+                            <ChainGlyph chain={selectedChain} />
+                          )
                         }
-                        className="h-auto min-h-[60px] w-full rounded-xl border border-[rgba(200,100,80,0.38)] bg-white px-3 py-2.5 text-left text-black shadow-none focus:ring-2 focus:ring-[#d35400]/35 focus:ring-offset-0 data-[size=default]:h-auto dark:border-[rgba(200,100,80,0.38)] dark:bg-white [&_svg]:text-black/45"
-                      >
-                        <span className="sr-only">
-                          <SelectValue placeholder="Select Token" />
-                        </span>
-                        <PaymentFieldTriggerContent
-                          glyph={
-                            selectedSymbolRep ? (
-                              <TokenGlyph
-                                iconUrl={selectedSymbolRep.iconUrl}
-                                symbol={selectedSymbol}
-                              />
-                            ) : (
-                              <PlaceholderGlyph />
-                            )
-                          }
-                          microLabel="Pay with this token"
-                          primaryText={selectedSymbol}
-                          placeholder="Select Token"
-                        />
-                      </SelectTrigger>
-                      <SelectContent
-                        position="popper"
-                        sideOffset={6}
-                        className="z-[110] max-h-[min(70vh,22rem)] border border-black/12 bg-[#fffef8] text-black shadow-xl dark:bg-[#fffef8] dark:text-black"
-                      >
-                        {symbolGroups.map((g) => {
-                          const subtitle = tokenDisplayName(g.representative);
-                          return (
-                            <SelectItem
-                              key={g.displaySymbol}
-                              value={g.displaySymbol}
-                              textValue={`${g.displaySymbol} ${subtitle ?? ""}`}
-                              className="cursor-pointer rounded-lg py-2 pr-8 pl-2 text-black focus:bg-[#f4ecd0] focus:text-black data-[highlighted]:bg-[#f4ecd0] data-[state=checked]:bg-[#f0e4c0]"
-                            >
-                              <span className="flex items-center gap-3">
-                                <TokenGlyph
-                                  iconUrl={g.representative.iconUrl}
-                                  symbol={g.displaySymbol}
-                                />
-                                <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
-                                  <span className="truncate text-base font-semibold leading-tight pizza-display">
-                                    {g.displaySymbol}
-                                  </span>
-                                  {subtitle ? (
-                                    <span
-                                      className="truncate text-xs leading-snug text-black/50"
-                                      style={{ fontFamily: "IBM Plex Sans, sans-serif" }}
-                                    >
-                                      {subtitle}
-                                    </span>
-                                  ) : null}
-                                </span>
-                              </span>
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
+                        microLabel="On this network"
+                        primaryText={
+                          selectedChain ? getChainDisplayName(selectedChain) : undefined
+                        }
+                        placeholder="Select Network"
+                      />
+                      <ChevronDownIcon className="size-4 shrink-0 opacity-50" aria-hidden />
+                    </button>
+                    <PaymentNetworkPickerDialog
+                      open={networkPickerOpen}
+                      onOpenChange={setNetworkPickerOpen}
+                      anchorRef={pickerAnchorRef}
+                      positionRef={paymentCardRef}
+                      chains={chainsForPicker}
+                      value={selectedChain}
+                      onSelect={setSelectedChain}
+                    />
 
-                    <Select
-                      value={effectiveChain}
-                      onValueChange={(chain) => {
-                        setChainPreferences((prev) => ({ ...prev, [selectedSymbol]: chain }));
-                      }}
-                      disabled={chainsForSymbol.length === 0}
+                    <button
+                      type="button"
+                      id="pay-token"
+                      disabled={symbolGroupsForPicker.length === 0}
+                      aria-haspopup="dialog"
+                      aria-expanded={tokenPickerOpen}
+                      aria-label={
+                        selectedSymbolRep
+                          ? `Pay with ${normalizeDisplaySymbol(selectedSymbolRep.symbol)}`
+                          : "Select token"
+                      }
+                      onClick={() => setTokenPickerOpen(true)}
+                      className={cn(
+                        PAYMENT_FIELD_RADIUS,
+                        PAYMENT_SELECT_TRIGGER_CLASS,
+                        "flex items-center justify-between gap-2",
+                      )}
                     >
-                      <SelectTrigger
-                        id="pay-network"
-                        size="default"
-                        aria-label={
-                          effectiveChain
-                            ? `On network ${getChainDisplayName(effectiveChain)}`
-                            : "Select network"
+                      <PaymentFieldTriggerContent
+                        glyph={
+                          selectedSymbolRep ? (
+                            <TokenGlyph
+                              iconUrl={selectedSymbolRep.iconUrl}
+                              symbol={selectedSymbol}
+                            />
+                          ) : (
+                            <PlaceholderGlyph />
+                          )
                         }
-                        className="h-auto min-h-[60px] w-full rounded-xl border border-[rgba(200,100,80,0.38)] bg-white px-3 py-2.5 text-left text-black shadow-none focus:ring-2 focus:ring-[#d35400]/35 focus:ring-offset-0 data-[size=default]:h-auto disabled:cursor-not-allowed disabled:opacity-55 dark:border-[rgba(200,100,80,0.38)] dark:bg-white [&_svg]:text-black/45"
-                      >
-                        <span className="sr-only">
-                          <SelectValue placeholder="Select Network" />
-                        </span>
-                        <PaymentFieldTriggerContent
-                          glyph={
-                            chainsForSymbol.length === 0 || !effectiveChain ? (
-                              <PlaceholderGlyph />
-                            ) : (
-                              <ChainGlyph chain={effectiveChain} />
-                            )
-                          }
-                          microLabel="On this network"
-                          primaryText={
-                            effectiveChain ? getChainShortName(effectiveChain) : undefined
-                          }
-                          placeholder="Select Network"
-                        />
-                      </SelectTrigger>
-                      <SelectContent
-                        position="popper"
-                        sideOffset={6}
-                        className="z-[110] max-h-[min(70vh,22rem)] border border-black/12 bg-[#fffef8] text-black shadow-xl dark:bg-[#fffef8] dark:text-black"
-                      >
-                        {chainsForSymbol.map((chain) => (
-                          <SelectItem
-                            key={chain}
-                            value={chain}
-                            textValue={getChainDisplayName(chain)}
-                            className="cursor-pointer rounded-lg py-2 pr-8 pl-2 text-black focus:bg-[#f4ecd0] focus:text-black data-[highlighted]:bg-[#f4ecd0] data-[state=checked]:bg-[#f0e4c0]"
-                          >
-                            <span className="flex items-center gap-3">
-                              <ChainGlyph chain={chain} />
-                              <span className="flex min-w-0 flex-col gap-0.5 text-left">
-                                <span className="truncate text-base font-semibold leading-tight pizza-display">
-                                  {getChainShortName(chain)}
-                                </span>
-                                <span className="truncate text-xs text-black/50">
-                                  {getChainDisplayName(chain)}
-                                </span>
-                              </span>
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                        microLabel="Pay with this token"
+                        primaryText={selectedSymbolRep ? selectedSymbol : undefined}
+                        placeholder="Select Token"
+                      />
+                      <ChevronDownIcon className="size-4 shrink-0 opacity-50" aria-hidden />
+                    </button>
+                    <PaymentTokenPickerDialog
+                      open={tokenPickerOpen}
+                      onOpenChange={setTokenPickerOpen}
+                      anchorRef={pickerAnchorRef}
+                      positionRef={paymentCardRef}
+                      chain={selectedChain}
+                      groups={symbolGroupsForPicker}
+                      value={selectedSymbol}
+                      onSelect={setSelectedSymbol}
+                    />
                   </div>
                 )}
 
@@ -747,7 +735,8 @@ function PizzaPayer() {
                   disabled={
                     preparePayment.isPending ||
                     normalizedTokens.length === 0 ||
-                    chainsForSymbol.length === 0 ||
+                    !selectedChain ||
+                    !selectedSymbol ||
                     !selectedToken
                   }
                   className="pizza-btn pizza-btn-primary w-full py-4 text-white"
@@ -755,9 +744,10 @@ function PizzaPayer() {
                 >
                   {preparePayment.isPending ? "getting your rate..." : "pay now →"}
                 </button>
-              </div>
+                </div>
 
-              <PizzaPoweredBy />
+                <PizzaPoweredBy />
+              </div>
             </>
           )}
 
@@ -810,7 +800,7 @@ function PizzaPayer() {
                     </button>
                   </div>
                   <p className="pizza-label text-black/40 mt-0.5">
-                    on {getChainDisplayName(effectiveChain)} network
+                    on {getChainDisplayName(selectedChain)} network
                   </p>
                 </div>
 
@@ -935,7 +925,7 @@ function PizzaPayer() {
                     </button>
                   </div>
                   <p className="pizza-label text-black/40 mt-0.5">
-                    on {getChainDisplayName(effectiveChain)}
+                    on {getChainDisplayName(selectedChain)}
                   </p>
                 </div>
               </div>
